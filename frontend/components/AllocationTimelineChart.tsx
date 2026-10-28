@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, LayoutChangeEvent } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  LayoutChangeEvent,
+  useWindowDimensions,
+} from 'react-native';
 import Svg, { Rect, Line, Text as SvgText, G } from 'react-native-svg';
 import Colors from '../constants/colors';
 import { FONT_FAMILY } from '../constants/typography';
@@ -21,23 +29,37 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
   onToggleView,
   algorithmNotes,
 }) => {
-  // Dynamic measurement so the timeline spans the full width of the card
-  const [containerWidth, setContainerWidth] = useState<number>(1000);
+  const { width: windowWidth } = useWindowDimensions();
+  // Guaranteed synchronous detection: true on phones and portrait tablets (< 800px)
+  const isMobile =
+    (windowWidth > 0 && windowWidth < 800) ||
+    (typeof window !== 'undefined' && typeof window.innerWidth === 'number' && window.innerWidth < 800);
+
+  const [containerWidth, setContainerWidth] = useState<number>(windowWidth || 390);
+
+  useEffect(() => {
+    if (windowWidth > 50) {
+      setContainerWidth(windowWidth);
+    }
+  }, [windowWidth]);
 
   const handleLayout = (e: LayoutChangeEvent) => {
     const width = e.nativeEvent.layout.width;
-    if (width > 200 && Math.abs(width - containerWidth) > 5) {
+    if (width > 50 && Math.abs(width - containerWidth) > 5) {
       setContainerWidth(width);
     }
   };
 
-  const isMobile = containerWidth < 700;
-  const paddingLeft = isMobile ? 190 : 280; // Ample width to ensure all activity names are fully on-screen
+  // On mobile, the SVG uses 640px horizontal canvas with horizontal panning
+  // On desktop, it spans 100% of the screen width
+  const svgCanvasWidth = isMobile ? 640 : Math.max(640, containerWidth);
+
+  const paddingLeft = isMobile ? 180 : 280; // Ample width to ensure all activity names are fully on-screen
   const paddingRight = 24;
   const paddingTop = 16;
   const rowHeight = 36;
   const timelineAxisHeight = 40;
-  const chartWidth = Math.max(200, containerWidth - paddingLeft - paddingRight);
+  const chartWidth = Math.max(200, svgCanvasWidth - paddingLeft - paddingRight);
 
   const totalRows = items.length;
   const svgHeight = paddingTop + totalRows * rowHeight + timelineAxisHeight;
@@ -58,7 +80,7 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
   const currentNowX = getX(clampedNow);
 
   // Timeline axis hour ticks (every 2 hours on wide screen, every 4 on small)
-  const hourTicks = containerWidth > 700
+  const hourTicks = !isMobile && containerWidth > 800
     ? [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
     : [0, 4, 8, 12, 16, 20, 24];
 
@@ -123,12 +145,17 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
       {/* Graphic Section: Full-width 24h timeline graphic */}
       <View style={styles.graphicSection} onLayout={handleLayout}>
         <Text style={styles.sectionHeader}>{t('allocation.timelineTitle')}</Text>
-        <View style={styles.svgWrapper}>
-          <Svg
-            viewBox={`0 0 ${containerWidth} ${svgHeight}`}
-            width="100%"
-            height={svgHeight}
-          >
+        <ScrollView
+          horizontal={isMobile}
+          showsHorizontalScrollIndicator={isMobile}
+          contentContainerStyle={{ minWidth: isMobile ? 640 : '100%' }}
+        >
+          <View style={styles.svgWrapper}>
+            <Svg
+              viewBox={`0 0 ${svgCanvasWidth} ${svgHeight}`}
+              width={isMobile ? 640 : '100%'}
+              height={svgHeight}
+            >
             {/* Background Grid Lines for each hour tick */}
             {hourTicks.map((h) => {
               const x = getX(h);
@@ -294,6 +321,7 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
             })}
           </Svg>
         </View>
+        </ScrollView>
       </View>
 
       {/* Schedule Activity Details: Stacked Cards for Mobile, 5-Column Table for Desktop */}

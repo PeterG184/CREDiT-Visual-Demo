@@ -131,45 +131,48 @@ export default function MaintenanceScreen() {
         <Text style={styles.fabButtonText}>Log Report</Text>
       </TouchableOpacity>
 
-      {/* Modal Dialog Window for Maintenance Form */}
-      <Modal
-        visible={isModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsModalOpen(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalWindow}>
-            {/* Modal Title Bar */}
-            <View style={styles.modalTitleBar}>
-              <View style={styles.modalTitleRow}>
-                <Feather name="tool" size={18} color={Colors.accentSky} />
-                <Text style={styles.modalTitleText}>Log Maintenance Incident</Text>
+      {/* Modal Dialog Window for Maintenance Form (Rock-Solid Cross-Platform Overlay) */}
+      {isModalOpen && (
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.backdrop}
+            activeOpacity={1}
+            onPress={() => setIsModalOpen(false)}
+          />
+          <KeyboardAvoidingView
+            style={styles.keyboardContainer}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.modalWindow}>
+              {/* Modal Title Bar */}
+              <View style={styles.modalTitleBar}>
+                <View style={styles.modalTitleRow}>
+                  <Feather name="tool" size={18} color={Colors.accentSky} />
+                  <Text style={styles.modalTitleText}>Log Maintenance Incident</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.modalCloseBtn}
+                  onPress={() => setIsModalOpen(false)}
+                  accessibilityRole="button"
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Feather name="x" size={22} color={Colors.textSecondary} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.modalCloseBtn}
-                onPress={() => setIsModalOpen(false)}
-                accessibilityRole="button"
-              >
-                <Feather name="x" size={20} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
 
-            {/* Modal Body */}
-            <ScrollView
-              style={styles.modalScrollView}
-              contentContainerStyle={styles.modalScrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={true}
-            >
-              <MaintenanceForm onClose={() => setIsModalOpen(false)} />
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+              {/* Modal Body */}
+              <ScrollView
+                style={styles.modalScrollView}
+                contentContainerStyle={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}
+              >
+                <MaintenanceForm onClose={() => setIsModalOpen(false)} />
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      )}
     </View>
   );
 }
@@ -177,6 +180,7 @@ export default function MaintenanceScreen() {
 const styles = StyleSheet.create({
   outerWrapper: {
     flex: 1,
+    backgroundColor: Colors.bgBase,
   },
   container: {
     flex: 1,
@@ -311,23 +315,50 @@ const styles = StyleSheet.create({
   },
   // Modal Window Styles
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    zIndex: 99999,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
+    ...Platform.select({
+      web: {
+        position: 'fixed' as any,
+      },
+    }),
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  keyboardContainer: {
+    width: '100%',
+    maxWidth: 720,
+    height: '94%',
+    maxHeight: '94%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
   },
   modalWindow: {
     backgroundColor: Colors.bgSurface,
     borderRadius: 16,
-    maxWidth: 720,
     width: '100%',
-    maxHeight: '90%',
+    height: '100%',
+    maxHeight: '100%',
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 10,
+    flexDirection: 'column',
   },
   modalTitleBar: {
     flexDirection: 'row',
@@ -350,13 +381,15 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   modalCloseBtn: {
-    padding: 4,
+    padding: 6,
     borderRadius: 6,
   },
   modalScrollView: {
     flex: 1,
+    minHeight: 0,
   },
   modalScrollContent: {
-    padding: 16,
+    padding: 20,
+    paddingBottom: 48,
   },
 });
