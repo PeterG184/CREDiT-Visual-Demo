@@ -65,6 +65,7 @@ interface MaintenanceFormProps {
 
 export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({ onClose }) => {
   const [techName, setTechName] = useState<string>('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [incidentDate, setIncidentDate] = useState<string>(
     new Date().toISOString().replace('T', ' ').substring(0, 16)
   );
@@ -134,9 +135,10 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({ onClose }) => 
 
   const handleSubmit = async () => {
     if (!techName.trim()) {
-      alert('Please enter technician name.');
+      setNameError('Please enter technician name.');
       return;
     }
+    setNameError(null);
 
     setSubmitting(true);
     const payload: MaintenanceReportPayload = {
@@ -197,12 +199,16 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({ onClose }) => 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>{t('maintenance.form.techName')} *</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, nameError ? styles.inputError : undefined]}
           placeholder={t('maintenance.form.techPlaceholder')}
           placeholderTextColor={Colors.textMuted}
           value={techName}
-          onChangeText={setTechName}
+          onChangeText={(val) => {
+            setTechName(val);
+            if (nameError) setNameError(null);
+          }}
         />
+        {nameError && <Text style={styles.errorText}>{nameError}</Text>}
       </View>
 
       {/* Field: Incident Timestamp */}
@@ -372,12 +378,8 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({ onClose }) => 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.bgSurface,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.borderSubtle,
     gap: 16,
+    width: '100%',
   },
   formTitle: {
     fontSize: 16,
@@ -437,6 +439,14 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 14,
     color: Colors.textPrimary,
+  },
+  inputError: {
+    borderColor: Colors.alertDanger,
+  },
+  errorText: {
+    fontSize: 12,
+    color: Colors.alertDanger,
+    fontWeight: '600',
   },
   checkboxGrid: {
     gap: 8,

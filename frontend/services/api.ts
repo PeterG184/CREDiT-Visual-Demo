@@ -101,16 +101,22 @@ export const ApiService = {
     payload: MaintenanceReportPayload
   ): Promise<{ reportId: string; status: string; computedUrgency: string; message: string }> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1200);
+
       const response = await fetch(`${API_BASE_URL}/microgrid/maintenance/report`, {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         return await response.json();
       }
     } catch (e) {
-      // Fallback
+      // Network error or backend offline: fallback immediately
     }
 
     const reportId = `REP-${Date.now().toString().slice(-6)}`;

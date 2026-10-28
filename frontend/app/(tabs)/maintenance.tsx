@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
@@ -132,17 +134,20 @@ export default function MaintenanceScreen() {
       {/* Modal Dialog Window for Maintenance Form */}
       <Modal
         visible={isModalOpen}
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         onRequestClose={() => setIsModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={styles.modalWindow}>
             {/* Modal Title Bar */}
             <View style={styles.modalTitleBar}>
               <View style={styles.modalTitleRow}>
                 <Feather name="tool" size={18} color={Colors.accentSky} />
-                <Text style={styles.modalTitleText}>Submit Maintenance Incident Report</Text>
+                <Text style={styles.modalTitleText}>Log Maintenance Incident</Text>
               </View>
               <TouchableOpacity
                 style={styles.modalCloseBtn}
@@ -157,12 +162,13 @@ export default function MaintenanceScreen() {
             <ScrollView
               style={styles.modalScrollView}
               contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
             >
               <MaintenanceForm onClose={() => setIsModalOpen(false)} />
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
