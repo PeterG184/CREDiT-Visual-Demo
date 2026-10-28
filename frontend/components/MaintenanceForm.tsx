@@ -59,7 +59,11 @@ const FAULT_OPTIONS: Record<string, string[]> = {
   ],
 };
 
-export const MaintenanceForm: React.FC = () => {
+interface MaintenanceFormProps {
+  onClose?: () => void;
+}
+
+export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({ onClose }) => {
   const [techName, setTechName] = useState<string>('');
   const [incidentDate, setIncidentDate] = useState<string>(
     new Date().toISOString().replace('T', ' ').substring(0, 16)
@@ -180,6 +184,11 @@ export const MaintenanceForm: React.FC = () => {
             <Text style={styles.successUrgency}>
               Urgency: {successReport.computedUrgency}
             </Text>
+            {onClose && (
+              <TouchableOpacity style={styles.closeWindowSuccessBtn} onPress={onClose}>
+                <Text style={styles.closeWindowSuccessText}>Done / Close Window</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}
@@ -331,17 +340,32 @@ export const MaintenanceForm: React.FC = () => {
         </View>
       </View>
 
-      {/* Submit Button */}
-      <TouchableOpacity
-        style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-        onPress={handleSubmit}
-        disabled={submitting}
-        accessibilityRole="button"
-      >
-        <Text style={styles.submitButtonText}>
-          {submitting ? 'Submitting...' : t('maintenance.form.submitButton')}
-        </Text>
-      </TouchableOpacity>
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsRow}>
+        {onClose && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={onClose}
+            accessibilityRole="button"
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            onClose && { flex: 1 },
+            submitting && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={submitting}
+          accessibilityRole="button"
+        >
+          <Text style={styles.submitButtonText}>
+            {submitting ? 'Submitting...' : t('maintenance.form.submitButton')}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -546,6 +570,39 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: Colors.bgSurface,
     fontSize: 14,
+    fontWeight: '700',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    backgroundColor: Colors.bgBase,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  closeWindowSuccessBtn: {
+    backgroundColor: Colors.batteryHealthy,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  closeWindowSuccessText: {
+    color: Colors.bgSurface,
+    fontSize: 12,
     fontWeight: '700',
   },
 });

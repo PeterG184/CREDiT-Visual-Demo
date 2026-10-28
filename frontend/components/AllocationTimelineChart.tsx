@@ -31,7 +31,8 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
     }
   };
 
-  const paddingLeft = 160; // Label space for activity names on the left
+  const isMobile = containerWidth < 700;
+  const paddingLeft = isMobile ? 190 : 280; // Ample width to ensure all activity names are fully on-screen
   const paddingRight = 24;
   const paddingTop = 16;
   const rowHeight = 36;
@@ -174,17 +175,19 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
                     />
                   )}
 
-                  {/* Activity Name Label (Left column) */}
+                  {/* Activity Name Label (Left-aligned from x=16 so it is NEVER off-screen) */}
                   <SvgText
-                    x={paddingLeft - 14}
+                    x={16}
                     y={y + 22}
                     fill={isActive ? Colors.cardActiveBorder : Colors.textPrimary}
-                    fontSize="13"
-                    fontWeight={isActive ? '700' : '500'}
+                    fontSize={isMobile ? '11' : '13'}
+                    fontWeight={isActive ? '700' : '600'}
                     fontFamily={FONT_FAMILY}
-                    textAnchor="end"
+                    textAnchor="start"
                   >
-                    {item.activityName}
+                    {isMobile && item.activityName.length > 20
+                      ? `${item.activityName.substring(0, 18)}...`
+                      : item.activityName}
                   </SvgText>
 
                   {/* Scheduled Block Bar */}
@@ -240,6 +243,16 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
             >
               NOW
             </SvgText>
+
+            {/* Column separator between activity names and timeline */}
+            <Line
+              x1={paddingLeft}
+              y1={paddingTop}
+              x2={paddingLeft}
+              y2={paddingTop + totalRows * rowHeight}
+              stroke={Colors.borderStrong}
+              strokeWidth="1.5"
+            />
 
             {/* Bottom 24-Hour Timeline Axis */}
             <Line
