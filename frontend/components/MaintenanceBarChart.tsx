@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Rect, Line, Text as SvgText, G } from 'react-native-svg';
 import Colors from '../constants/colors';
+import { FONT_FAMILY } from '../constants/typography';
 import { InverterTelemetry } from '../types/microgrid';
 import { t } from '../services/i18n';
 
@@ -78,6 +79,7 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                   fontSize="11"
                   textAnchor="end"
                   fontWeight="500"
+                  fontFamily={FONT_FAMILY}
                 >
                   {tick}
                 </SvgText>
@@ -123,6 +125,7 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                   fill={Colors.textSecondary}
                   fontSize="11"
                   fontWeight="600"
+                  fontFamily={FONT_FAMILY}
                   textAnchor="middle"
                 >
                   {inv.expectedPowerKw.toFixed(1)}
@@ -143,6 +146,7 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                   fill={actColor}
                   fontSize="11"
                   fontWeight="700"
+                  fontFamily={FONT_FAMILY}
                   textAnchor="middle"
                 >
                   {inv.acPowerKw.toFixed(1)}
@@ -155,6 +159,7 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                   fill={Colors.textPrimary}
                   fontSize="12"
                   fontWeight="600"
+                  fontFamily={FONT_FAMILY}
                   textAnchor="middle"
                 >
                   {inv.name}
@@ -167,6 +172,7 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                   fill={actColor}
                   fontSize="10"
                   fontWeight="700"
+                  fontFamily={FONT_FAMILY}
                   textAnchor="middle"
                 >
                   {inv.variancePercent > 0

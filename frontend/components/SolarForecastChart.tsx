@@ -10,6 +10,7 @@ import Svg, {
   Circle,
 } from 'react-native-svg';
 import Colors from '../constants/colors';
+import { FONT_FAMILY } from '../constants/typography';
 import { ForecastDataPoint } from '../types/microgrid';
 import { t } from '../services/i18n';
 
@@ -111,6 +112,7 @@ export const SolarForecastChart: React.FC<SolarForecastChartProps> = ({
                   fontSize="11"
                   textAnchor="end"
                   fontWeight="500"
+                  fontFamily={FONT_FAMILY}
                 >
                   {tick}
                 </SvgText>
@@ -150,6 +152,7 @@ export const SolarForecastChart: React.FC<SolarForecastChartProps> = ({
             fill={Colors.accentSky}
             fontSize="10"
             fontWeight="700"
+            fontFamily={FONT_FAMILY}
             textAnchor={currentX > width - 80 ? 'end' : 'start'}
           >
             NOW
@@ -176,6 +179,7 @@ export const SolarForecastChart: React.FC<SolarForecastChartProps> = ({
                   fontSize="11"
                   textAnchor="middle"
                   fontWeight="500"
+                  fontFamily={FONT_FAMILY}
                 >
                   {label}
                 </SvgText>

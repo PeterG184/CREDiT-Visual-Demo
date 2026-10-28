@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, LayoutChangeEvent } from 'react-native';
 import Svg, { Rect, Line, Text as SvgText, G } from 'react-native-svg';
 import Colors from '../constants/colors';
+import { FONT_FAMILY } from '../constants/typography';
 import { LoadAllocationItem } from '../types/microgrid';
 import { t } from '../services/i18n';
 
@@ -20,14 +21,22 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
   onToggleView,
   algorithmNotes,
 }) => {
-  // SVG Graphic Dimensions
-  const svgWidth = 640;
-  const paddingLeft = 140; // Label space for activity names
-  const paddingRight = 20;
-  const paddingTop = 15;
-  const rowHeight = 32;
-  const timelineAxisHeight = 35;
-  const chartWidth = svgWidth - paddingLeft - paddingRight;
+  // Dynamic measurement so the timeline spans the full width of the card
+  const [containerWidth, setContainerWidth] = useState<number>(1000);
+
+  const handleLayout = (e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    if (width > 200 && Math.abs(width - containerWidth) > 5) {
+      setContainerWidth(width);
+    }
+  };
+
+  const paddingLeft = 160; // Label space for activity names on the left
+  const paddingRight = 24;
+  const paddingTop = 16;
+  const rowHeight = 36;
+  const timelineAxisHeight = 40;
+  const chartWidth = Math.max(200, containerWidth - paddingLeft - paddingRight);
 
   const totalRows = items.length;
   const svgHeight = paddingTop + totalRows * rowHeight + timelineAxisHeight;
@@ -47,8 +56,10 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
   const clampedNow = Math.max(0, Math.min(24, currentHour));
   const currentNowX = getX(clampedNow);
 
-  // Timeline axis hour ticks
-  const hourTicks = [0, 4, 8, 12, 16, 20, 24];
+  // Timeline axis hour ticks (every 2 hours on wide screen, every 4 on small)
+  const hourTicks = containerWidth > 700
+    ? [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+    : [0, 4, 8, 12, 16, 20, 24];
 
   return (
     <View style={styles.card}>
@@ -108,11 +119,15 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
         </View>
       ) : null}
 
-      {/* Graphic Section: Activities positioned immediately above bottom 24h timeline */}
-      <View style={styles.graphicSection}>
+      {/* Graphic Section: Full-width 24h timeline graphic */}
+      <View style={styles.graphicSection} onLayout={handleLayout}>
         <Text style={styles.sectionHeader}>{t('allocation.timelineTitle')}</Text>
         <View style={styles.svgWrapper}>
-          <Svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height={svgHeight}>
+          <Svg
+            viewBox={`0 0 ${containerWidth} ${svgHeight}`}
+            width="100%"
+            height={svgHeight}
+          >
             {/* Background Grid Lines for each hour tick */}
             {hourTicks.map((h) => {
               const x = getX(h);
@@ -137,22 +152,22 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
               const endH = timeToHour(endStr);
 
               const blockX = getX(startH);
-              const blockWidth = Math.max(8, getX(endH) - blockX);
+              const blockWidth = Math.max(12, getX(endH) - blockX);
               const y = paddingTop + index * rowHeight;
-              const blockY = y + 4;
-              const blockHeight = rowHeight - 8;
+              const blockY = y + 5;
+              const blockHeight = rowHeight - 10;
 
               const isActive = item.isActiveNow;
               const isAdjusted = item.isAdjusted;
 
-              // Row background highlight for active item
               return (
                 <G key={item.id}>
+                  {/* Row background highlight for active item */}
                   {isActive && (
                     <Rect
                       x={0}
                       y={y}
-                      width={svgWidth}
+                      width={containerWidth}
                       height={rowHeight}
                       fill={Colors.cardActiveBg}
                       rx={4}
@@ -161,16 +176,15 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
 
                   {/* Activity Name Label (Left column) */}
                   <SvgText
-                    x={paddingLeft - 10}
-                    y={y + 19}
-                    fill={isActive ? Colors.textPrimary : Colors.textSecondary}
-                    fontSize="11"
+                    x={paddingLeft - 14}
+                    y={y + 22}
+                    fill={isActive ? Colors.cardActiveBorder : Colors.textPrimary}
+                    fontSize="13"
                     fontWeight={isActive ? '700' : '500'}
+                    fontFamily={FONT_FAMILY}
                     textAnchor="end"
                   >
-                    {item.activityName.length > 18
-                      ? `${item.activityName.substring(0, 16)}...`
-                      : item.activityName}
+                    {item.activityName}
                   </SvgText>
 
                   {/* Scheduled Block Bar */}
@@ -179,7 +193,7 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
                     y={blockY}
                     width={blockWidth}
                     height={blockHeight}
-                    rx={4}
+                    rx={6}
                     fill={
                       isActive
                         ? Colors.accentSky
@@ -191,13 +205,14 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
                     strokeWidth={isActive ? 2 : 0}
                   />
 
-                  {/* Block Label (Inside or beside bar) */}
+                  {/* Block Label */}
                   <SvgText
-                    x={blockX + 6}
-                    y={blockY + 15}
+                    x={blockX + 10}
+                    y={blockY + 17}
                     fill={isActive || isAdjusted ? Colors.bgSurface : Colors.textPrimary}
-                    fontSize="10"
-                    fontWeight="600"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily={FONT_FAMILY}
                   >
                     {`${item.powerDemandKw} kW`}
                   </SvgText>
@@ -210,16 +225,17 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
               x1={currentNowX}
               y1={paddingTop}
               x2={currentNowX}
-              y2={paddingTop + totalRows * rowHeight + 10}
+              y2={paddingTop + totalRows * rowHeight + 12}
               stroke={Colors.alertDanger}
               strokeWidth="2"
             />
             <SvgText
               x={currentNowX}
-              y={paddingTop + totalRows * rowHeight + 22}
+              y={paddingTop + totalRows * rowHeight + 25}
               fill={Colors.alertDanger}
-              fontSize="9"
+              fontSize="10"
               fontWeight="700"
+              fontFamily={FONT_FAMILY}
               textAnchor="middle"
             >
               NOW
@@ -229,10 +245,10 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
             <Line
               x1={paddingLeft}
               y1={paddingTop + totalRows * rowHeight}
-              x2={svgWidth - paddingRight}
+              x2={containerWidth - paddingRight}
               y2={paddingTop + totalRows * rowHeight}
               stroke={Colors.textPrimary}
-              strokeWidth="1.5"
+              strokeWidth="2"
             />
 
             {/* Timeline Hour Marks & Labels along the bottom */}
@@ -245,15 +261,16 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
                     x1={x}
                     y1={paddingTop + totalRows * rowHeight}
                     x2={x}
-                    y2={paddingTop + totalRows * rowHeight + 5}
+                    y2={paddingTop + totalRows * rowHeight + 6}
                     stroke={Colors.textPrimary}
                     strokeWidth="1.5"
                   />
                   <SvgText
                     x={x}
-                    y={paddingTop + totalRows * rowHeight + 18}
+                    y={paddingTop + totalRows * rowHeight + 20}
                     fill={Colors.textSecondary}
-                    fontSize="10"
+                    fontSize="11"
+                    fontFamily={FONT_FAMILY}
                     textAnchor="middle"
                     fontWeight="500"
                   >
@@ -266,10 +283,14 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
         </View>
       </View>
 
-      {/* Table Style View Section */}
+      {/* Full-Width Table Style View Section */}
       <View style={styles.tableSection}>
         <Text style={styles.sectionHeader}>Schedule Activity Details</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tableScrollContent}
+        >
           <View style={styles.table}>
             {/* Table Header */}
             <View style={styles.tableHeaderRow}>
@@ -330,7 +351,7 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
                     </Text>
                     {item.isAdjusted && (
                       <Text style={styles.originalWindowText}>
-                        (Orig: {item.plannedStartTime}–{item.plannedEndTime})
+                        (Baseline: {item.plannedStartTime}–{item.plannedEndTime})
                       </Text>
                     )}
                   </View>
@@ -385,10 +406,11 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.bgSurface,
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    gap: 16,
+    gap: 20,
+    width: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -398,30 +420,32 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   titleArea: {
-    gap: 2,
+    gap: 4,
     flex: 1,
-    minWidth: 240,
+    minWidth: 260,
   },
   title: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
+    fontFamily: FONT_FAMILY,
   },
   toggleContainer: {
     flexDirection: 'row',
     backgroundColor: Colors.bgBase,
     borderRadius: 8,
-    padding: 3,
+    padding: 4,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
   },
   toggleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 6,
   },
   toggleBtnActive: {
@@ -432,22 +456,24 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   toggleBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     color: Colors.textSecondary,
+    fontFamily: FONT_FAMILY,
   },
   toggleBtnTextActive: {
     color: Colors.textPrimary,
     fontWeight: '700',
+    fontFamily: FONT_FAMILY,
   },
   noticeBanner: {
     flexDirection: 'row',
     backgroundColor: Colors.sunSubtle,
-    padding: 12,
+    padding: 14,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.sunPrimary,
-    gap: 10,
+    gap: 12,
     alignItems: 'flex-start',
   },
   noticeDot: {
@@ -462,44 +488,54 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   noticeTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   noticeBody: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
+    fontFamily: FONT_FAMILY,
   },
   graphicSection: {
-    gap: 10,
+    gap: 12,
     backgroundColor: Colors.bgBase,
-    padding: 12,
+    padding: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
+    width: '100%',
   },
   sectionHeader: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textPrimary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: FONT_FAMILY,
   },
   svgWrapper: {
     width: '100%',
     overflow: 'hidden',
   },
   tableSection: {
-    gap: 10,
+    gap: 12,
+    width: '100%',
+  },
+  tableScrollContent: {
+    width: '100%',
   },
   table: {
-    minWidth: 560,
+    width: '100%',
+    minWidth: 700,
   },
   tableHeaderRow: {
     flexDirection: 'row',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1.5,
     borderBottomColor: Colors.borderStrong,
+    alignItems: 'center',
   },
   th: {
     fontSize: 12,
@@ -507,43 +543,49 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: FONT_FAMILY,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderSubtle,
   },
   tableRowActive: {
     backgroundColor: Colors.cardActiveBg,
     borderRadius: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
   },
   tableRowAdjusted: {
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,
     borderLeftColor: Colors.sunPrimary,
-    paddingLeft: 6,
+    paddingLeft: 8,
   },
   colPriority: {
-    width: 60,
+    flex: 0.8,
+    minWidth: 70,
   },
   colActivity: {
-    flex: 2,
-    paddingRight: 8,
+    flex: 2.5,
+    minWidth: 200,
+    paddingRight: 12,
   },
   colWindow: {
-    width: 140,
+    flex: 1.6,
+    minWidth: 150,
   },
   colLoad: {
-    width: 80,
+    flex: 1,
+    minWidth: 90,
   },
   colStatus: {
-    width: 110,
+    flex: 1.4,
+    minWidth: 130,
   },
   priorityBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 4,
     alignSelf: 'flex-start',
   },
@@ -561,11 +603,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   activityText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   activityTextActive: {
     fontWeight: '700',
@@ -575,29 +619,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.alertWarning,
     marginTop: 2,
+    fontFamily: FONT_FAMILY,
   },
   windowText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   originalWindowText: {
-    fontSize: 10,
+    fontSize: 11,
     color: Colors.textSecondary,
+    fontFamily: FONT_FAMILY,
   },
   loadText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    gap: 5,
+    gap: 6,
     alignSelf: 'flex-start',
   },
   statusBadgeActive: {
@@ -618,11 +666,11 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   statusBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
 });
 
 export default AllocationTimelineChart;
-

@@ -10,6 +10,7 @@ import Svg, {
   Circle,
 } from 'react-native-svg';
 import Colors from '../constants/colors';
+import { FONT_FAMILY } from '../constants/typography';
 import { BatteryHistoricalPoint } from '../types/microgrid';
 import { t } from '../services/i18n';
 
@@ -107,6 +108,7 @@ export const BatteryHistoryChart: React.FC<BatteryHistoryChartProps> = ({
                   fontSize="11"
                   textAnchor="end"
                   fontWeight="500"
+                  fontFamily={FONT_FAMILY}
                 >
                   {tick}%
                 </SvgText>
@@ -171,6 +173,7 @@ export const BatteryHistoryChart: React.FC<BatteryHistoryChartProps> = ({
                   fontSize="11"
                   textAnchor="middle"
                   fontWeight={isNow ? '700' : '500'}
+                  fontFamily={FONT_FAMILY}
                 >
                   {label}
                 </SvgText>
