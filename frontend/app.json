@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "CREDiT Digital Twin",
+    "slug": "credit-digital-twin",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "scheme": "credit-twin",
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

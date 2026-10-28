@@ -1,0 +1,157 @@
+{
+  "common": {
+    "appName": "CREDiT Digital Twin",
+    "status": {
+      "optimal": "Optimal",
+      "normal": "Normal",
+      "warning": "Attention Required",
+      "fault": "Fault Condition",
+      "charging": "Charging from Solar",
+      "discharging": "Discharging to Load",
+      "idle": "Idle / Balanced",
+      "active": "Active",
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "continuous": "Continuously Active"
+    },
+    "units": {
+      "kw": "kW",
+      "kwh": "kWh",
+      "volts": "V",
+      "amps": "A",
+      "celsius": "°C",
+      "wm2": "W/m²",
+      "percent": "%",
+      "ms": "m/s"
+    },
+    "demo": {
+      "title": "Simulation Time Controls",
+      "live": "Live Clock",
+      "morning": "08:30 Morning",
+      "midday": "12:30 Solar Peak",
+      "evening": "16:30 Tapering",
+      "night": "21:30 Night Mode",
+      "simulated": "Simulated Time"
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "forecast": "Forecast",
+    "allocation": "Allocation",
+    "battery": "Battery",
+    "maintenance": "Maintenance"
+  },
+  "dashboard": {
+    "title": "Microgrid Overview",
+    "systemHealth": "System Status",
+    "powerBalance": {
+      "title": "Power Balance (Now)",
+      "generating": "Generating",
+      "using": "Using",
+      "net": "Net Flow",
+      "currentlyPowering": "Currently Powering"
+    },
+    "battery": {
+      "title": "Battery Storage",
+      "capacity": "Total Capacity",
+      "status": "Battery Status"
+    },
+    "weather": {
+      "title": "Weather Conditions",
+      "irradiance": "Irradiance",
+      "temperature": "Temperature",
+      "humidity": "Humidity",
+      "wind": "Wind",
+      "conditions": {
+        "overcast": "Low Sun / Overcast",
+        "moderate": "Moderate Sun",
+        "strong": "Strong Sunlight"
+      }
+    }
+  },
+  "forecast": {
+    "title": "24-Hour Generation Forecast",
+    "peakProduction": "Expected Peak Production",
+    "estimatedDailyYield": "Estimated Total Daily Yield",
+    "chartTitle": "Hourly Solar Generation Curve (Single-Metric)",
+    "chartYAxis": "Generation (kW)",
+    "chartXAxis": "Time of Day",
+    "summaryTitle": "Forecast Summary",
+    "periods": {
+      "morning": "Morning (06:00 - 11:00): Clear skies, strong production",
+      "midday": "Midday (11:00 - 15:00): Peak energy, suitable for heavy machinery",
+      "afternoon": "Afternoon (15:00 - 18:00): Gradual tapering of solar generation",
+      "night": "Night: Generation resumes at 06:15 tomorrow"
+    }
+  },
+  "allocation": {
+    "title": "Energy Allocation Schedule",
+    "standardPlan": "Standard Plan",
+    "liveSchedule": "Today's Live Schedule",
+    "adjustedNotice": "Live Status: Adjusted for atmospheric and battery conditions",
+    "timelineTitle": "24-Hour Timeline & Scheduled Operations",
+    "table": {
+      "priority": "Priority",
+      "activity": "Activity",
+      "window": "Operating Window",
+      "load": "Load Demand",
+      "duration": "Duration",
+      "status": "Status"
+    },
+    "items": {
+      "water": "Water Pumping",
+      "workshop": "Workshop Operations",
+      "bakery": "Bakery Operations",
+      "mill": "Hammer Mill Operations",
+      "continuous": "Teaching, Admin & Residential"
+    }
+  },
+  "battery": {
+    "title": "Battery Storage System",
+    "totalCapacity": "Total Capacity",
+    "currentStored": "Current Stored",
+    "netPowerFlow": "Net Power Flow",
+    "runtimeProjectionTitle": "Battery Runtime Projection",
+    "historyTitle": "Past 24 Hours Battery Life (State of Charge %)",
+    "towers": {
+      "tower1": "Tower 1 Status",
+      "tower2": "Tower 2 Status",
+      "modules": "10 x Dyness DL5.0C Pro Modules",
+      "soc": "SoC",
+      "temp": "Temp",
+      "voltage": "Voltage",
+      "current": "Current",
+      "health": "Health",
+      "balanced": "Balanced",
+      "unbalanced": "Check Balance"
+    }
+  },
+  "maintenance": {
+    "title": "Site Overview & Equipment Diagnostics",
+    "inverterChartTitle": "Inverter Performance: Expected vs. Actual (kW)",
+    "varianceChartTitle": "Inverter Leeway Variance (%)",
+    "equipment": {
+      "pv": "PV Array (86 Panels / 50.3 kWp)",
+      "weather": "Weather Station",
+      "solis1": "Inverter 1 (Solis 17kW)",
+      "solis2": "Inverter 2 (Solis 17kW)",
+      "sunsynk": "Battery Inverter (Sunsynk 20kW)",
+      "towers": "Dyness ESS Towers 1 & 2"
+    },
+    "form": {
+      "title": "Submit Maintenance Report / Fault",
+      "techName": "Technician Name",
+      "techPlaceholder": "Enter technician full name",
+      "incidentDate": "Fault Incident Date & Time",
+      "equipmentSelect": "Equipment Involved (Select all that apply)",
+      "otherEquipment": "Other Equipment Notes",
+      "faultSelect": "Specific Observed Fault",
+      "otherFault": "Other Fault Notes",
+      "photoUpload": "Component Photo Upload (Mocked)",
+      "photoButton": "Select Image File (Max 5MB)",
+      "urgency": "System Urgency Level (Auto-Computed)",
+      "submitButton": "Submit Diagnostic Report",
+      "successMessage": "Incident report logged successfully. Maintenance ticket created."
+    }
+  }
+}
