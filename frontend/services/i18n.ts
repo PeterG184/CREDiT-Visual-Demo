@@ -27,3 +27,4 @@ export function t(path: string, fallback?: string): string {
 }
 
 export default t;
+

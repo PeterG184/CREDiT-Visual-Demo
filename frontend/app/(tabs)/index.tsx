@@ -34,90 +34,93 @@ export default function DashboardScreen() {
         activeLoads={activeLoads}
       />
 
-      {/* Battery Quick-Status Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{t('dashboard.battery.title')}</Text>
-          <View
-            style={[
-              styles.badge,
-              isHealthy ? styles.badgeGreen : styles.badgeOrange,
-            ]}
-          >
+      {/* Responsive Two-Column Row for Desktop / 1920x1080 Displays */}
+      <View style={styles.twoColumnGrid}>
+        {/* Battery Quick-Status Card */}
+        <View style={[styles.card, styles.columnCard]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{t('dashboard.battery.title')}</Text>
             <View
               style={[
-                styles.badgeDot,
-                { backgroundColor: isHealthy ? Colors.batteryHealthy : Colors.alertWarning },
+                styles.badge,
+                isHealthy ? styles.badgeGreen : styles.badgeOrange,
               ]}
-            />
-            <Text style={styles.badgeText}>
-              {batterySummary.flowState === 'CHARGING'
-                ? t('common.status.charging')
-                : batterySummary.flowState === 'DISCHARGING'
-                ? t('common.status.discharging')
-                : t('common.status.idle')}
-            </Text>
+            >
+              <View
+                style={[
+                  styles.badgeDot,
+                  { backgroundColor: isHealthy ? Colors.batteryHealthy : Colors.alertWarning },
+                ]}
+              />
+              <Text style={styles.badgeText}>
+                {batterySummary.flowState === 'CHARGING'
+                  ? t('common.status.charging')
+                  : batterySummary.flowState === 'DISCHARGING'
+                  ? t('common.status.discharging')
+                  : t('common.status.idle')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Battery Capacity & SoC */}
+          <View style={styles.batteryMainRow}>
+            <View style={styles.batteryNumberCol}>
+              <Text style={styles.batterySocText}>{soc.toFixed(1)}%</Text>
+              <Text style={styles.batterySubLabel}>
+                {batterySummary.storedKwh.toFixed(1)} kWh / 102.4 kWh
+              </Text>
+            </View>
+
+            <View style={styles.usableBox}>
+              <Text style={styles.usableLabel}>Usable Energy</Text>
+              <Text style={styles.usableValue}>{batterySummary.usableKwh.toFixed(1)} kWh</Text>
+              <Text style={styles.usableReserve}>(Above 10% Reserve)</Text>
+            </View>
+          </View>
+
+          {/* Dynamic Context Explanation */}
+          <View style={styles.projectionBox}>
+            <Text style={styles.projectionText}>"{batterySummary.plainTextProjection}"</Text>
           </View>
         </View>
 
-        {/* Battery Capacity & SoC */}
-        <View style={styles.batteryMainRow}>
-          <View style={styles.batteryNumberCol}>
-            <Text style={styles.batterySocText}>{soc.toFixed(1)}%</Text>
-            <Text style={styles.batterySubLabel}>
-              {batterySummary.storedKwh.toFixed(1)} kWh / 102.4 kWh
-            </Text>
+        {/* Weather Conditions Card */}
+        <View style={[styles.card, styles.columnCard]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{t('dashboard.weather.title')}</Text>
+            <View style={styles.weatherBadge}>
+              <Text style={styles.weatherConditionText}>{weatherSummary.conditionLabel}</Text>
+            </View>
           </View>
 
-          <View style={styles.usableBox}>
-            <Text style={styles.usableLabel}>Usable Energy</Text>
-            <Text style={styles.usableValue}>{batterySummary.usableKwh.toFixed(1)} kWh</Text>
-            <Text style={styles.usableReserve}>(Above 10% Reserve)</Text>
-          </View>
-        </View>
+          <View style={styles.weatherGrid}>
+            <View style={styles.weatherItem}>
+              <Text style={styles.weatherLabel}>{t('dashboard.weather.irradiance')}</Text>
+              <Text style={styles.weatherValue}>
+                {weatherSummary.irradiance} <Text style={styles.unit}>W/m²</Text>
+              </Text>
+            </View>
 
-        {/* Dynamic Context Explanation */}
-        <View style={styles.projectionBox}>
-          <Text style={styles.projectionText}>"{batterySummary.plainTextProjection}"</Text>
-        </View>
-      </View>
+            <View style={styles.weatherItem}>
+              <Text style={styles.weatherLabel}>{t('dashboard.weather.temperature')}</Text>
+              <Text style={styles.weatherValue}>
+                {weatherSummary.ambientTemp} <Text style={styles.unit}>°C</Text>
+              </Text>
+            </View>
 
-      {/* Weather Conditions Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{t('dashboard.weather.title')}</Text>
-          <View style={styles.weatherBadge}>
-            <Text style={styles.weatherConditionText}>{weatherSummary.conditionLabel}</Text>
-          </View>
-        </View>
+            <View style={styles.weatherItem}>
+              <Text style={styles.weatherLabel}>{t('dashboard.weather.humidity')}</Text>
+              <Text style={styles.weatherValue}>
+                {weatherSummary.humidity} <Text style={styles.unit}>%</Text>
+              </Text>
+            </View>
 
-        <View style={styles.weatherGrid}>
-          <View style={styles.weatherItem}>
-            <Text style={styles.weatherLabel}>{t('dashboard.weather.irradiance')}</Text>
-            <Text style={styles.weatherValue}>
-              {weatherSummary.irradiance} <Text style={styles.unit}>W/m²</Text>
-            </Text>
-          </View>
-
-          <View style={styles.weatherItem}>
-            <Text style={styles.weatherLabel}>{t('dashboard.weather.temperature')}</Text>
-            <Text style={styles.weatherValue}>
-              {weatherSummary.ambientTemp} <Text style={styles.unit}>°C</Text>
-            </Text>
-          </View>
-
-          <View style={styles.weatherItem}>
-            <Text style={styles.weatherLabel}>{t('dashboard.weather.humidity')}</Text>
-            <Text style={styles.weatherValue}>
-              {weatherSummary.humidity} <Text style={styles.unit}>%</Text>
-            </Text>
-          </View>
-
-          <View style={styles.weatherItem}>
-            <Text style={styles.weatherLabel}>{t('dashboard.weather.wind')}</Text>
-            <Text style={styles.weatherValue}>
-              {weatherSummary.windSpeed} <Text style={styles.unit}>m/s {weatherSummary.windDirection}</Text>
-            </Text>
+            <View style={styles.weatherItem}>
+              <Text style={styles.weatherLabel}>{t('dashboard.weather.wind')}</Text>
+              <Text style={styles.weatherValue}>
+                {weatherSummary.windSpeed} <Text style={styles.unit}>m/s {weatherSummary.windDirection}</Text>
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -131,29 +134,41 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgBase,
   },
   contentContainer: {
-    padding: 16,
-    gap: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 20,
+    maxWidth: 1600,
+    width: '100%',
+    alignSelf: 'center',
   },
   pageHeader: {
     gap: 4,
-    marginBottom: 4,
   },
   pageTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
   pageSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.textSecondary,
+  },
+  twoColumnGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+  },
+  columnCard: {
+    flex: 1,
+    minWidth: 360,
   },
   card: {
     backgroundColor: Colors.bgSurface,
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    gap: 14,
+    gap: 16,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -205,7 +220,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   batterySocText: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '700',
     color: Colors.batteryHealthy,
   },
@@ -216,8 +231,8 @@ const styles = StyleSheet.create({
   },
   usableBox: {
     backgroundColor: Colors.bgBase,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
@@ -240,7 +255,7 @@ const styles = StyleSheet.create({
   },
   projectionBox: {
     backgroundColor: Colors.batterySubtle,
-    padding: 12,
+    padding: 14,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.batteryHealthy,
@@ -271,9 +286,9 @@ const styles = StyleSheet.create({
   },
   weatherItem: {
     flex: 1,
-    minWidth: 120,
+    minWidth: 140,
     backgroundColor: Colors.bgBase,
-    padding: 12,
+    padding: 14,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,

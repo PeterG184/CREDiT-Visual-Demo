@@ -127,3 +127,4 @@ export interface MaintenanceReportPayload {
   photoUrl?: string;
   computedUrgency: UrgencyLevel;
 }
+

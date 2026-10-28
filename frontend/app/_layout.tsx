@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Platform, SafeAreaView } from 'react-native';
-import { Stack, Slot } from 'expo-router';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
+import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import Colors from '../constants/colors';
 import Header from '../components/Header';
@@ -11,7 +11,7 @@ export default function RootLayout() {
     <SimulationProvider>
       <SafeAreaView style={styles.outerContainer}>
         <StatusBar style="dark" />
-        <View style={styles.desktopShell}>
+        <View style={styles.appShell}>
           <Header />
           <View style={styles.contentArea}>
             <Slot />
@@ -25,21 +25,12 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#E2E8F0', // Neutral backdrop for desktop frame
+    backgroundColor: Colors.bgBase,
   },
-  desktopShell: {
+  appShell: {
     flex: 1,
     width: '100%',
-    maxWidth: 1024,
-    alignSelf: 'center',
     backgroundColor: Colors.bgBase,
-    // Tablet/Desktop elevation shadow
-    ...Platform.select({
-      web: {
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-      },
-      default: {},
-    }),
   },
   contentArea: {
     flex: 1,

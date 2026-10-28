@@ -30,6 +30,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgBase,
   },
   contentContainer: {
-    padding: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    maxWidth: 1600,
+    width: '100%',
+    alignSelf: 'center',
   },
 });
+

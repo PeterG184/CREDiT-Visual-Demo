@@ -457,3 +457,4 @@ export function getInverterDiagnostics(t: number): InverterTelemetry[] {
     },
   ];
 }
+

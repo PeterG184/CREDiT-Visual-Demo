@@ -175,8 +175,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    maxWidth: 1600,
+    width: '100%',
+    alignSelf: 'center',
   },
   branding: {
     flexDirection: 'row',
@@ -274,11 +277,14 @@ const styles = StyleSheet.create({
   },
   controlsPanel: {
     backgroundColor: Colors.bgBase,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: Colors.borderSubtle,
-    gap: 10,
+    gap: 12,
+    maxWidth: 1600,
+    width: '100%',
+    alignSelf: 'center',
   },
   controlsHeader: {
     flexDirection: 'row',
@@ -348,3 +354,4 @@ const styles = StyleSheet.create({
 });
 
 export default Header;
+

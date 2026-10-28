@@ -182,15 +182,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgBase,
   },
   contentContainer: {
-    padding: 16,
-    gap: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 20,
+    maxWidth: 1600,
+    width: '100%',
+    alignSelf: 'center',
   },
   pageHeader: {
     gap: 4,
-    marginBottom: 4,
   },
   pageTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
