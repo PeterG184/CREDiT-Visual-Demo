@@ -32,9 +32,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 24,
     paddingVertical: 20,
-    maxWidth: 1600,
     width: '100%',
-    alignSelf: 'center',
   },
 });
 

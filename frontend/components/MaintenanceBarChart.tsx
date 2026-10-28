@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Svg, { Rect, Line, Text as SvgText, G } from 'react-native-svg';
 import Colors from '../constants/colors';
 import { FONT_FAMILY } from '../constants/typography';
@@ -11,14 +11,22 @@ interface MaintenanceBarChartProps {
 }
 
 export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ inverters }) => {
-  const width = 640;
-  const height = 220;
-  const paddingLeft = 50;
-  const paddingRight = 20;
-  const paddingTop = 25;
-  const paddingBottom = 40;
+  const [containerWidth, setContainerWidth] = useState<number>(1000);
 
-  const chartWidth = width - paddingLeft - paddingRight;
+  const handleLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 200 && Math.abs(w - containerWidth) > 5) {
+      setContainerWidth(w);
+    }
+  };
+
+  const height = 260;
+  const paddingLeft = 65; // Ample margin so Y-axis labels (0, 5, 10, 15, 20, 25) are never cut off
+  const paddingRight = 30;
+  const paddingTop = 30;
+  const paddingBottom = 45;
+
+  const chartWidth = Math.max(200, containerWidth - paddingLeft - paddingRight);
   const chartHeight = height - paddingTop - paddingBottom;
 
   const maxKw = 25; // 17kW rated + overhead
@@ -32,10 +40,10 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
 
   // Group width per inverter
   const groupWidth = chartWidth / (inverters.length || 1);
-  const barWidth = 36;
+  const barWidth = Math.min(70, Math.max(38, chartWidth * 0.08));
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} onLayout={handleLayout}>
       <View style={styles.cardHeader}>
         <View style={styles.titleArea}>
           <Text style={styles.cardTitle}>{t('maintenance.inverterChartTitle')}</Text>
@@ -58,7 +66,20 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
 
       {/* Bar Chart SVG */}
       <View style={styles.svgWrapper}>
-        <Svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height}>
+        <Svg viewBox={`0 0 ${containerWidth} ${height}`} width="100%" height={height}>
+          {/* Y-axis Unit Label */}
+          <SvgText
+            x={paddingLeft - 12}
+            y={paddingTop - 12}
+            fill={Colors.textSecondary}
+            fontSize="11"
+            textAnchor="end"
+            fontWeight="700"
+            fontFamily={FONT_FAMILY}
+          >
+            (kW)
+          </SvgText>
+
           {/* Grid lines */}
           {yTicks.map((tick) => {
             const y = getY(tick);
@@ -67,18 +88,18 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                 <Line
                   x1={paddingLeft}
                   y1={y}
-                  x2={width - paddingRight}
+                  x2={containerWidth - paddingRight}
                   y2={y}
                   stroke={Colors.borderSubtle}
                   strokeWidth="1"
                 />
                 <SvgText
-                  x={paddingLeft - 8}
+                  x={paddingLeft - 12}
                   y={y + 4}
                   fill={Colors.textSecondary}
-                  fontSize="11"
+                  fontSize="12"
                   textAnchor="end"
-                  fontWeight="500"
+                  fontWeight="600"
                   fontFamily={FONT_FAMILY}
                 >
                   {tick}
@@ -90,14 +111,14 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
           {/* Inverter Bar Groups */}
           {inverters.map((inv, idx) => {
             const groupCenterX = paddingLeft + idx * groupWidth + groupWidth / 2;
-            const expBarX = groupCenterX - barWidth - 4;
-            const actBarX = groupCenterX + 4;
+            const expBarX = groupCenterX - barWidth - 6;
+            const actBarX = groupCenterX + 6;
 
             const expY = getY(inv.expectedPowerKw);
-            const expH = paddingTop + chartHeight - expY;
+            const expH = Math.max(2, paddingTop + chartHeight - expY);
 
             const actY = getY(inv.acPowerKw);
-            const actH = paddingTop + chartHeight - actY;
+            const actH = Math.max(2, paddingTop + chartHeight - actY);
 
             // Leeway variance color
             const isWarning = inv.variancePercent > 15 && inv.variancePercent <= 30;
@@ -117,13 +138,13 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                   width={barWidth}
                   height={expH}
                   fill={Colors.borderStrong}
-                  rx={3}
+                  rx={4}
                 />
                 <SvgText
                   x={expBarX + barWidth / 2}
-                  y={expY - 6}
+                  y={expY - 8}
                   fill={Colors.textSecondary}
-                  fontSize="11"
+                  fontSize="12"
                   fontWeight="600"
                   fontFamily={FONT_FAMILY}
                   textAnchor="middle"
@@ -138,13 +159,13 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                   width={barWidth}
                   height={actH}
                   fill={actColor}
-                  rx={3}
+                  rx={4}
                 />
                 <SvgText
                   x={actBarX + barWidth / 2}
-                  y={actY - 6}
+                  y={actY - 8}
                   fill={actColor}
-                  fontSize="11"
+                  fontSize="12"
                   fontWeight="700"
                   fontFamily={FONT_FAMILY}
                   textAnchor="middle"
@@ -155,10 +176,10 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                 {/* X-axis Label */}
                 <SvgText
                   x={groupCenterX}
-                  y={paddingTop + chartHeight + 18}
+                  y={paddingTop + chartHeight + 20}
                   fill={Colors.textPrimary}
-                  fontSize="12"
-                  fontWeight="600"
+                  fontSize="13"
+                  fontWeight="700"
                   fontFamily={FONT_FAMILY}
                   textAnchor="middle"
                 >
@@ -168,9 +189,9 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
                 {/* Variance text */}
                 <SvgText
                   x={groupCenterX}
-                  y={paddingTop + chartHeight + 32}
+                  y={paddingTop + chartHeight + 36}
                   fill={actColor}
-                  fontSize="10"
+                  fontSize="11"
                   fontWeight="700"
                   fontFamily={FONT_FAMILY}
                   textAnchor="middle"
@@ -193,10 +214,10 @@ export const MaintenanceBarChart: React.FC<MaintenanceBarChartProps> = ({ invert
           <Line
             x1={paddingLeft}
             y1={paddingTop + chartHeight}
-            x2={width - paddingRight}
+            x2={containerWidth - paddingRight}
             y2={paddingTop + chartHeight}
             stroke={Colors.textPrimary}
-            strokeWidth="1.5"
+            strokeWidth="2"
           />
         </Svg>
       </View>
@@ -227,10 +248,11 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.bgSurface,
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    gap: 14,
+    gap: 16,
+    width: '100%',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -241,22 +263,24 @@ const styles = StyleSheet.create({
   },
   titleArea: {
     flex: 1,
-    minWidth: 240,
-    gap: 2,
+    minWidth: 260,
+    gap: 4,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   cardSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
+    fontFamily: FONT_FAMILY,
   },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   legendItem: {
     flexDirection: 'row',
@@ -264,14 +288,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   legendBox: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 3,
   },
   legendText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: Colors.textSecondary,
+    fontFamily: FONT_FAMILY,
   },
   svgWrapper: {
     width: '100%',
@@ -279,24 +304,25 @@ const styles = StyleSheet.create({
   },
   leewayInfoBox: {
     backgroundColor: Colors.bgBase,
-    padding: 12,
+    padding: 14,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    gap: 6,
+    gap: 8,
   },
   leewayTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
   },
   leewayRow: {
-    gap: 4,
+    gap: 6,
   },
   leewayItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   leewayIndicator: {
     width: 8,
@@ -304,11 +330,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   leewayText: {
-    fontSize: 11,
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '500',
+    fontFamily: FONT_FAMILY,
   },
 });
 
 export default MaintenanceBarChart;
-

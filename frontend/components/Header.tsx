@@ -177,9 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 14,
-    maxWidth: 1600,
     width: '100%',
-    alignSelf: 'center',
   },
   branding: {
     flexDirection: 'row',
@@ -282,9 +280,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.borderSubtle,
     gap: 12,
-    maxWidth: 1600,
     width: '100%',
-    alignSelf: 'center',
   },
   controlsHeader: {
     flexDirection: 'row',
