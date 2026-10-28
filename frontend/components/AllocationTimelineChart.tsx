@@ -296,25 +296,13 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
         </View>
       </View>
 
-      {/* Full-Width Table Style View Section */}
+      {/* Schedule Activity Details: Stacked Cards for Mobile, 5-Column Table for Desktop */}
       <View style={styles.tableSection}>
         <Text style={styles.sectionHeader}>Schedule Activity Details</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tableScrollContent}
-        >
-          <View style={styles.table}>
-            {/* Table Header */}
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.th, styles.colPriority]}>{t('allocation.table.priority')}</Text>
-              <Text style={[styles.th, styles.colActivity]}>{t('allocation.table.activity')}</Text>
-              <Text style={[styles.th, styles.colWindow]}>{t('allocation.table.window')}</Text>
-              <Text style={[styles.th, styles.colLoad]}>{t('allocation.table.load')}</Text>
-              <Text style={[styles.th, styles.colStatus]}>{t('allocation.table.status')}</Text>
-            </View>
 
-            {/* Table Body Rows */}
+        {isMobile ? (
+          /* Mobile Option 1: High-Contrast Stacked Activity Cards */
+          <View style={styles.mobileCardsList}>
             {items.map((item) => {
               const startStr = item.actualStartTime || item.plannedStartTime;
               const endStr = item.actualEndTime || item.plannedEndTime;
@@ -324,56 +312,34 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
                 <View
                   key={item.id}
                   style={[
-                    styles.tableRow,
-                    item.isActiveNow && styles.tableRowActive,
-                    item.isAdjusted && styles.tableRowAdjusted,
+                    styles.mobileCard,
+                    item.isActiveNow && styles.mobileCardActive,
+                    item.isAdjusted && styles.mobileCardAdjusted,
                   ]}
                 >
-                  <View style={styles.colPriority}>
-                    <View
-                      style={[
-                        styles.priorityBadge,
-                        isContinuous
-                          ? styles.priorityContinuous
-                          : styles.priorityRanked,
-                      ]}
-                    >
-                      <Text style={styles.priorityText}>
-                        {isContinuous ? 'CONT' : `P${item.priorityRank}`}
+                  {/* Top Row: Priority Pill + Activity Name + Status Badge */}
+                  <View style={styles.mobileCardTopRow}>
+                    <View style={styles.mobileCardHeaderLeft}>
+                      <View
+                        style={[
+                          styles.priorityBadge,
+                          isContinuous ? styles.priorityContinuous : styles.priorityRanked,
+                        ]}
+                      >
+                        <Text style={styles.priorityText}>
+                          {isContinuous ? 'CONT' : `P${item.priorityRank}`}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.mobileActivityName,
+                          item.isActiveNow && styles.mobileActivityNameActive,
+                        ]}
+                      >
+                        {item.activityName}
                       </Text>
                     </View>
-                  </View>
 
-                  <View style={styles.colActivity}>
-                    <Text
-                      style={[
-                        styles.activityText,
-                        item.isActiveNow && styles.activityTextActive,
-                      ]}
-                    >
-                      {item.activityName}
-                    </Text>
-                    {item.adjustmentNote && (
-                      <Text style={styles.adjustmentNoteText}>{item.adjustmentNote}</Text>
-                    )}
-                  </View>
-
-                  <View style={styles.colWindow}>
-                    <Text style={styles.windowText}>
-                      {startStr} – {endStr}
-                    </Text>
-                    {item.isAdjusted && (
-                      <Text style={styles.originalWindowText}>
-                        (Baseline: {item.plannedStartTime}–{item.plannedEndTime})
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.colLoad}>
-                    <Text style={styles.loadText}>{item.powerDemandKw} kW</Text>
-                  </View>
-
-                  <View style={styles.colStatus}>
                     <View
                       style={[
                         styles.statusBadge,
@@ -405,11 +371,152 @@ export const AllocationTimelineChart: React.FC<AllocationTimelineChartProps> = (
                       </Text>
                     </View>
                   </View>
+
+                  {/* Middle Row: Operating Window & Power Load Demand */}
+                  <View style={styles.mobileCardMiddleRow}>
+                    <View style={styles.mobileWindowBox}>
+                      <Text style={styles.mobileMetaLabel}>Operating Window</Text>
+                      <Text style={styles.mobileWindowText}>
+                        {startStr} – {endStr}
+                      </Text>
+                      {item.isAdjusted && (
+                        <Text style={styles.mobileOrigWindowText}>
+                          Baseline: {item.plannedStartTime}–{item.plannedEndTime}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.mobileLoadBox}>
+                      <Text style={styles.mobileMetaLabel}>Power Demand</Text>
+                      <Text style={styles.mobileLoadText}>{item.powerDemandKw} kW</Text>
+                    </View>
+                  </View>
+
+                  {/* Bottom Row: Dynamic Adjustment Callout */}
+                  {item.adjustmentNote && (
+                    <View style={styles.mobileAdjustmentCallout}>
+                      <View style={styles.adjustmentDot} />
+                      <Text style={styles.mobileAdjustmentText}>{item.adjustmentNote}</Text>
+                    </View>
+                  )}
                 </View>
               );
             })}
           </View>
-        </ScrollView>
+        ) : (
+          /* Desktop: Full-Width 5-Column Table */
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tableScrollContent}
+          >
+            <View style={styles.table}>
+              {/* Table Header */}
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.th, styles.colPriority]}>{t('allocation.table.priority')}</Text>
+                <Text style={[styles.th, styles.colActivity]}>{t('allocation.table.activity')}</Text>
+                <Text style={[styles.th, styles.colWindow]}>{t('allocation.table.window')}</Text>
+                <Text style={[styles.th, styles.colLoad]}>{t('allocation.table.load')}</Text>
+                <Text style={[styles.th, styles.colStatus]}>{t('allocation.table.status')}</Text>
+              </View>
+
+              {/* Table Body Rows */}
+              {items.map((item) => {
+                const startStr = item.actualStartTime || item.plannedStartTime;
+                const endStr = item.actualEndTime || item.plannedEndTime;
+                const isContinuous = item.priorityRank === 'CONTINUOUS';
+
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.tableRow,
+                      item.isActiveNow && styles.tableRowActive,
+                      item.isAdjusted && styles.tableRowAdjusted,
+                    ]}
+                  >
+                    <View style={styles.colPriority}>
+                      <View
+                        style={[
+                          styles.priorityBadge,
+                          isContinuous
+                            ? styles.priorityContinuous
+                            : styles.priorityRanked,
+                        ]}
+                      >
+                        <Text style={styles.priorityText}>
+                          {isContinuous ? 'CONT' : `P${item.priorityRank}`}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.colActivity}>
+                      <Text
+                        style={[
+                          styles.activityText,
+                          item.isActiveNow && styles.activityTextActive,
+                        ]}
+                      >
+                        {item.activityName}
+                      </Text>
+                      {item.adjustmentNote && (
+                        <Text style={styles.adjustmentNoteText}>{item.adjustmentNote}</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.colWindow}>
+                      <Text style={styles.windowText}>
+                        {startStr} – {endStr}
+                      </Text>
+                      {item.isAdjusted && (
+                        <Text style={styles.originalWindowText}>
+                          (Baseline: {item.plannedStartTime}–{item.plannedEndTime})
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.colLoad}>
+                      <Text style={styles.loadText}>{item.powerDemandKw} kW</Text>
+                    </View>
+
+                    <View style={styles.colStatus}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          item.isActiveNow
+                            ? styles.statusBadgeActive
+                            : isContinuous
+                            ? styles.statusBadgeContinuous
+                            : styles.statusBadgeScheduled,
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.statusDot,
+                            {
+                              backgroundColor: item.isActiveNow
+                                ? Colors.accentSky
+                                : isContinuous
+                                ? Colors.batteryHealthy
+                                : Colors.textMuted,
+                            },
+                          ]}
+                        />
+                        <Text style={styles.statusBadgeText}>
+                          {item.isActiveNow
+                            ? 'Active Now'
+                            : isContinuous
+                            ? 'Continuous'
+                            : 'Scheduled'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </View>
   );
@@ -683,6 +790,119 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textPrimary,
     fontFamily: FONT_FAMILY,
+  },
+  // Mobile Option 1: Activity Cards Stack Styles
+  mobileCardsList: {
+    gap: 12,
+    width: '100%',
+  },
+  mobileCard: {
+    backgroundColor: Colors.bgBase,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    gap: 12,
+  },
+  mobileCardActive: {
+    backgroundColor: Colors.cardActiveBg,
+    borderColor: Colors.cardActiveBorder,
+    borderWidth: 1.5,
+  },
+  mobileCardAdjusted: {
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.sunPrimary,
+  },
+  mobileCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  mobileCardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 180,
+  },
+  mobileActivityName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
+    flex: 1,
+  },
+  mobileActivityNameActive: {
+    color: Colors.cardActiveBorder,
+  },
+  mobileCardMiddleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.bgSurface,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    gap: 12,
+  },
+  mobileWindowBox: {
+    gap: 2,
+    flex: 1,
+  },
+  mobileMetaLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: FONT_FAMILY,
+  },
+  mobileWindowText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    fontFamily: FONT_FAMILY,
+  },
+  mobileOrigWindowText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontFamily: FONT_FAMILY,
+  },
+  mobileLoadBox: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  mobileLoadText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.accentSky,
+    fontFamily: FONT_FAMILY,
+  },
+  mobileAdjustmentCallout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.sunSubtle,
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.sunPrimary,
+    gap: 8,
+  },
+  adjustmentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.sunPrimary,
+  },
+  mobileAdjustmentText: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+    fontWeight: '500',
+    fontFamily: FONT_FAMILY,
+    flex: 1,
   },
 });
 
