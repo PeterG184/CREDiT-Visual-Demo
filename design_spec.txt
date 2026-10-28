@@ -1,0 +1,828 @@
+# CREDiT Digital Twin Platform — Technical & Design Specification
+
+---
+
+## 1. Executive Summary & System Overview
+
+The **CREDiT Digital Twin Platform** is an interactive monitoring, forecasting, and load management interface designed for a rural community solar microgrid in Sub-Saharan Africa. The system bridges physical microgrid infrastructure with human-centric decision-making, providing real-time operational visibility, predictive load guidance, and streamlined maintenance reporting.
+
+### Microgrid Physical Topology & Hardware Specifications
+
+```
+                       [ 50.3 kWp PV Array ]
+                    (86 x 585W Panels / Multi-String)
+                                |
+               +----------------+----------------+
+               |                                 |
+     [ Solis S5-GR3P17K ]              [ Solis S5-GR3P17K ]
+   (17 kWac / 25.5 kWdc)             (17 kWac / 25.5 kWdc)
+               |                                 |
+               +----------------+----------------+
+                                | (AC Bus)
+                                |
+                [ Sunsynk SUN-20K-SG05LP3-EU-SM2 ]
+                      (20 kWac Battery Inverter)
+                                |
+            +-------------------+-------------------+
+            | (48V DC Bus)                          |
+   [ Tower 1: 10 x Dyness DL5.0C ]         [ Tower 2: 10 x Dyness DL5.0C ]
+     (51.2 kWh / 51.2V Stack)                (51.2 kWh / 51.2V Stack)
+            \                                       /
+             +------------------+------------------+
+                                |
+                   Total Storage: 102.4 kWh
+
+```
+
+* **Photovoltaic (PV) Generation:** 50.3 kWp total capacity across 86 monocrystalline 585W panels wired into multiple strings with per-string Voltage ($V$) and Current ($I$) sensing.
+* **PV Inverters:** 2 x Solis S5-GR3P17K 3-Phase inverters operating in parallel (34 kWac rated output, 51 kWdc max input).
+* **Battery Storage Inverter:** 1 x Sunsynk/Deye SUN-20K-SG05LP3-EU-SM2 (20 kWac continuous rating with bidirectional AC/DC coupling).
+* **Energy Storage System (ESS):** 102.4 kWh total gross storage configured as two parallel vertical towers. Each tower contains 10 x Dyness DL5.0C Pro modules (5.12 kWh, 51.2V, 100Ah each).
+* **Environmental Monitoring Station:** Integrated weather station reporting ambient temperature (°C), relative humidity (%), global horizontal solar irradiance ($W/m^2$), wind speed ($m/s$), and wind direction (degrees/cardinal).
+
+---
+
+## 2. System Architecture & Technology Stack
+
+```
++-----------------------------------------------------------------------+
+|                             CLIENT LAYER                              |
+|   React Native for Web & Mobile (TypeScript, Expo / RN Web)           |
+|   - Mobile-First Layout (360px - 480px Base)                          |
+|   - Responsive Desktop Shell (Max width container: 1024px)            |
+|   - i18n Localization Layer (Key-Value Dictionary Architecture)       |
++-----------------------------------------------------------------------+
+                                   |
+                             HTTPS / JSON
+                                   |
++-----------------------------------------------------------------------+
+|                      HOSTING & NETWORKING LAYER                       |
+|   AWS Lightsail Linux Instance (Ubuntu 24.04 LTS)                     |
+|   - Nginx Reverse Proxy (SSL Termination via Let's Encrypt)           |
+|   - Node.js Process Manager (PM2 cluster mode)                        |
++-----------------------------------------------------------------------+
+                                   |
++-----------------------------------------------------------------------+
+|                            BACKEND ENGINE                             |
+|   Node.js / Express (TypeScript, Node 20+)                            |
+|   - Dynamic Solar & Battery Physics Simulation Engine                 |
+|   - Allocation Recommendation Engine (State Machine)                  |
+|   - Static Assets & Upload Handling (Multer for fault photos)         |
+|   - Future Adaptor Layer: Direct PostgreSQL (REST / PostgREST)        |
++-----------------------------------------------------------------------+
+
+```
+
+### Stack Decisions & Constraints
+
+* **Frontend Framework:** React Native with React Native Web (TypeScript). Enables a single codebase for Android/iOS deployment and the browser interface.
+* **State Management:** React Context API or lightweight Zustand store for reactive client state.
+* **Backend Runtime:** Node.js with Express / Fastify written in TypeScript.
+* **Web Server / Reverse Proxy:** Nginx handling port 80/443 traffic, caching static bundles, and routing `/api/v1/*` upstream to the Node.js process running on `localhost:5000`.
+* **Data Tier Evolution:** Phase 1 uses an in-memory dynamic state simulator. Phase 2 binds the same REST endpoints to PostgreSQL without requiring frontend refactoring.
+
+---
+
+## 3. UI/UX Design System & Global Guidelines
+
+### Tone and Accessibility Principles
+
+* **Tone:** "Neutral-Happy" — grounded, clear, warm, and reassuring. Avoid technical alarmism.
+* **Descriptive Primacy:** Metric cards present actionable text descriptors alongside clean values rather than complex multi-line graphs.
+* **Single-Variable Visualizations:** Graphs display strictly one data stream per view (e.g., only solar generation over time, never solar vs. load vs. irradiance stacked on one axis).
+* **Sunlight Readability:** High-contrast text on solid backgrounds. Minimum contrast ratio of 4.5:1 for normal text, 3:1 for large graphical elements.
+* **Internationalization (i18n):** All visible UI text must be referenced via structured key lookup (e.g., `t('dashboard.battery.status')`). No hardcoded English strings in JSX.
+
+### Color Palette
+
+| Token Name | Hex Code | Role / Usage |
+| --- | --- | --- |
+| `--bg-base` | `#F8F9FA` | Page background (soft, warm off-white, non-glare) |
+| `--bg-surface` | `#FFFFFF` | Card, container, and sheet backgrounds |
+| `--border-subtle` | `#E9ECEF` | Dividers, card borders, and line separators |
+| `--text-primary` | `#1A202C` | High-contrast body text, primary values, and headers |
+| `--text-secondary` | `#4A5568` | Descriptive helper text, units, secondary captions |
+| `--sun-primary` | `#F59E0B` | Solar generation indicators, daytime active states |
+| `--sun-subtle` | `#FEF3C7` | Background highlight for solar metrics cards |
+| `--battery-healthy` | `#10B981` | Battery state normal, charging, health optimal |
+| `--battery-subtle` | `#D1FAE5` | Battery background fill cards |
+| `--accent-sky` | `#0284C7` | Water pumping, weather indicators, informative badges |
+| `--alert-warning` | `#F97316` | Expected output variance (15–20% leeway trigger) |
+| `--alert-danger` | `#EF4444` | Inverter lockouts, hardware sensor fault trips |
+
+### Typography
+
+* **Primary Typeface:** `Inter`, `Roboto`, or system `-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`.
+* **Display Sizes:**
+* *Hero Metric:* 32px / Bold (700)
+* *Section Title / Page Header:* 20px / Semi-Bold (600)
+* *Card Header / Label:* 14px / Medium (500), Uppercase tracking +0.5px
+* *Body / Descriptive String:* 15px / Regular (400)
+* *Caption / Fine Details:* 12px / Regular (400)
+
+
+
+---
+
+## 4. Frontend Displays & Wireframe Specifications
+
+### Global Shell & Layout
+
+* **Mobile Viewport:** Sticky header (36px height) displaying microgrid identity + bottom tab navigation (64px height).
+* **Desktop Viewport:** Content restricted to a max-width container (960px) centered horizontally, simulating a clean dashboard tablet/app console.
+
+---
+
+### Screen 1: Main Dashboard (`/dashboard`)
+
+Provides an immediate pulse check on energy generation, current consumption, battery health, and atmospheric context.
+
+```
++-------------------------------------------------------------+
+| CREDiT Digital Twin               [System Status: Normal 🟢]|
++-------------------------------------------------------------+
+| POWER BALANCE (NOW)                                         |
+|  Generating: 38.2 kW            Using: 23.0 kW              |
+|  [=====================       ] [============               ]
+|                                                             |
+|  Currently Powering:                                        |
+|  * Workshop Operations (10 kW)                              |
+|  * Teaching & Residential (14 kW)                           |
++-------------------------------------------------------------+
+| BATTERY STORAGE                                             |
+|  78% (80.0 kWh) - Charging from Solar                       |
+|  "Plenty of energy. Batteries will be fully charged by      |
+|   14:30 at current production rates."                       |
++-------------------------------------------------------------+
+| WEATHER CONDITIONS                                          |
+|  * Irradiance: 890 W/m² (Bright Sun)                        |
+|  * Temperature: 31°C  |  Humidity: 42%                      |
+|  * Wind: 3.2 m/s North-East                                 |
++-------------------------------------------------------------+
+
+```
+
+#### Component Hierarchy & Data Bindings
+
+1. **System Health Ribbon:**
+* Displays `Normal` (Green) when all inverters and batteries have zero fault flags and actual solar is within tolerance.
+* Displays `Attention Required` (Orange/Red) if an inverter trip or string drop is detected.
+
+
+2. **Power Flow Hero Card:**
+* Metric A: Total Solar Generation ($kW$). Derived from `solis_1.ac_power + solis_2.ac_power`.
+* Metric B: Total Community Load ($kW$). Derived from active allocation schedule sum.
+* Descriptive List: Bolds the currently powered high-priority community operations.
+
+
+3. **Battery Quick-Status Card:**
+* Aggregated State of Charge ($SoC\ \%$) across Tower 1 and Tower 2.
+* Dynamic context string explaining in plain English when the battery will finish charging or how long it will run.
+
+
+4. **Weather Card:**
+* Irradiance rendered with an ambient intensity label: `< 200 W/m²` (Low Sun/Overcast), `200–600 W/m²` (Moderate Sun), `> 600 W/m²` (Strong Sun).
+
+
+
+---
+
+### Screen 2: 24-Hour Energy Forecast (`/forecast`)
+
+Delivers a forward-looking view of generation capacity to allow technicians and administrators to plan activities.
+
+```
++-------------------------------------------------------------+
+| 24-HOUR GENERATION FORECAST                                 |
++-------------------------------------------------------------+
+| Expected Peak Production: 44.5 kW at 12:30                  |
+| Estimated Total Daily Yield: 285 kWh                        |
++-------------------------------------------------------------+
+| [ Hourly Solar Generation Curve (Single-Metric) ]           |
+|  kW                                                         |
+|  50|                /---\                                   |
+|  40|               /     \                                  |
+|  30|              /       \                                 |
+|  20|             /         \                                |
+|  10|            /           \                               |
+|   0+-----------+------+------+------+-----------+           |
+|   06:00      09:00  12:00  15:00  18:00       21:00         |
++-------------------------------------------------------------+
+| FORECAST SUMMARY                                            |
+| * Morning (06:00 - 11:00): Clear skies, strong production   |
+| * Midday (11:00 - 15:00): Peak energy, suitable for mills   |
+| * Afternoon (15:00 - 18:00): Gradual tapering               |
+| * Night: Generation resumes at 06:15 tomorrow               |
++-------------------------------------------------------------+
+
+```
+
+#### Component Rules
+
+* **Graph Type:** Single-metric filled area/bar chart showing generation ($kW$) vs. time of day.
+* **Time Horizon:** From 00:00 to 23:59 of the current calendar day. A vertical indicator marks the current time.
+* **Plain English Summary Card:** Converts curve data into textual operational windows (e.g., "Optimal window for high-energy machinery: 10:30 to 14:30").
+
+---
+
+### Screen 3: Energy Allocation Schedule (`/allocation`)
+
+Empowers operators to review the optimized load recommendations produced by the digital twin's load management algorithm.
+
+```
++-------------------------------------------------------------+
+| ENERGY ALLOCATION SCHEDULE                                  |
+| [  Standard Plan  ]  | * [ Today's Live Schedule ]          |
++-------------------------------------------------------------+
+| LIVE STATUS: Adjusted for afternoon cloud cover             |
+| "Hammer mill operation moved earlier to capture peak solar."|
++-------------------------------------------------------------+
+| 08:00 - 10:00 | Water Pumping (Priority 1)                  |
+| 9 kW | Status: Completed 🟢                                 |
++-------------------------------------------------------------+
+| 10:00 - 13:00 | Workshop Operations (Priority 2)            |
+| 10 kW | Status: Active Now 🟡                               |
++-------------------------------------------------------------+
+| 12:00 - 14:00 | Hammer Mill Operations (Shifted from 15:00) |
+| 10 kW | Status: Scheduled ⚪ (Moved +3 hrs earlier)          |
++-------------------------------------------------------------+
+| 14:00 - 17:00 | Bakery Operations (Priority 3)              |
+| 9 kW | Status: Scheduled ⚪                                 |
++-------------------------------------------------------------+
+| 08:00 - 22:00 | Teaching & Residential Services             |
+| 14 kW | Status: Continuously Active 🟢                      |
++-------------------------------------------------------------+
+
+```
+
+#### Schedule Baseline Reference Data (Standard Plan)
+
+| Priority | Activity | Scheduled Operating Window | Load ($kW$) | Operating Duration | Daily Energy ($kWh$) |
+| --- | --- | --- | --- | --- | --- |
+| **1** | Water Pumping | `08:00–10:00` *(Sub-slots: 06:30–07:30, 12:45–13:45, 17:45–18:45)* | 9 | 2 hrs | 18 |
+| **2** | Workshop Operations | `10:00–13:00` | 10 | 3 hrs | 30 |
+| **3** | Bakery Operations | `12:00–15:00` | 9 | 3 hrs | 27 |
+| **4** | Hammer Mill Operations | `15:00–17:00` | 10 | 2 hrs | 20 |
+| **Continuous** | Teaching, Admin & Residential | `08:00–22:00` | 14 | 10 hrs active base | 140 |
+| **TOTAL** | — | — | — | — | **235 kWh** |
+
+#### Operational Interaction
+
+* **Segmented Control / Toggle:**
+* `Standard Plan`: Shows static, baseline scheduled operating periods without environmental adjustments.
+* `Today's Live Schedule`: Renders the algorithmic reallocation driven by real-time battery storage and irradiance forecasts.
+
+
+* **Schedule Adjustment Markers:** When a load is rescheduled or load-shed, display an explicit visual tag (e.g., `Shifted to 12:00`, `Shortened to 1 hr`) accompanied by the reason (e.g., `"Shifted to avoid low evening battery reserves"`).
+
+---
+
+### Screen 4: Battery Storage & Lifetime Monitor (`/battery`)
+
+Visualizes storage health across the physical Dyness racks and projects battery duration based on the active allocation plan.
+
+```
++-------------------------------------------------------------+
+| BATTERY STORAGE SYSTEM                                      |
++-------------------------------------------------------------+
+| TOTAL CAPACITY: 102.4 kWh | CURRENT: 76.8 kWh (75%)         |
+| Net Power Flow: +8.5 kW (Charging from Solis Inverters)     |
++-------------------------------------------------------------+
+| BATTERY RUNTIME PROJECTION                                  |
+| [====================================                      ] |
+| "With today's schedule, the batteries will comfortably power|
+|  residential & teaching loads all night until 07:15 AM."    |
++-------------------------------------------------------------+
+| TOWER 1 STATUS                    TOWER 2 STATUS            |
+| 10 x Dyness DL5.0C Pro Modules    10 x Dyness DL5.0C Pro    |
+| SoC: 75% | Temp: 28°C             SoC: 75% | Temp: 29°C     |
+| Voltage: 51.4 V                   Voltage: 51.3 V           |
+| Health: 100% (Balanced)           Health: 100% (Balanced)   |
++-------------------------------------------------------------+
+
+```
+
+#### Component Rules
+
+* **Dynamic Predictive String:** The UI computes:
+
+$$\text{Remaining Usable Energy } (kWh) = \text{Total Storage } (102.4 \times SoC) - \text{Reserve Floor } (10.24 \text{ at } 10\%)$$
+
+
+
+It cross-references this against evening loads after solar sunset ($P_{\text{solar}} = 0$) to compute the exact depletion timestamp.
+* **Dual Tower Comparison:** Dedicated cards for Tower 1 and Tower 2 show module voltage balance, operating temperature, and individual state of charge.
+
+---
+
+### Screen 5: Site Map & Maintenance Diagnostics (`/maintenance`)
+
+Combines a structural site map showing physical hardware layout with device health indicators, followed by an actionable fault logging form.
+
+```
++-------------------------------------------------------------+
+| SITE OVERVIEW & EQUIPMENT MAP                               |
++-------------------------------------------------------------+
+| [PV ARRAY: 86 Panels / 50.3 kWp]         [WEATHER STATION]  |
+| Status: Optimal (96% Yield) 🟢           Irradiance: 840 W/m²|
+|                                          Temp: 30°C         |
+| ---------------------------------------  ------------------ |
+| [INVERTER 1: Solis 17kW]   [INVERTER 2: Solis 17kW]         |
+| Status: Running 🟢         Status: Minor Variance 🟡        |
+| Active: 17.0 kW            Active: 13.8 kW (-18% variance)  |
+| ----------------------------------------------------------- |
+| [BATTERY INVERTER: Sunsynk 20kW]  [BATTERY TOWER 1 & 2]     |
+| Status: Operational 🟢            Dyness 102.4 kWh          |
+| AC/DC Coupling: OK                Status: Balanced 🟢       |
++-------------------------------------------------------------+
+| SUBMIT MAINTENANCE REPORT / FAULT                           |
++-------------------------------------------------------------+
+| Technician Name: [ John Kamau                             ] |
+| Fault Incident Date: [ 2026-10-28 14:15                 ]   |
+|                                                             |
+| Equipment Involved (Select all that apply):                 |
+| [X] Solis Inverters   [ ] PV Panels Array   [ ] Dyness ESS  |
+| [ ] Sunsynk Inverter  [ ] Weather Station   [ ] Wiring/BOS  |
+| Other Equipment Notes: [ Inverter 2 heat sink dirty       ] |
+|                                                             |
+| Specific Observed Fault (Dynamic per selected equipment):   |
+| [ ] Grid Overvoltage (OV-G-V01)                             |
+| [X] PV String Underperformance / Variance                   |
+| [ ] DC Isolation Fault (PV-ISO-ERR)                         |
+| Other Fault Notes: [ Fan makes humming noise              ] |
+|                                                             |
+| Photo Upload: [[ Upload Component Image (Max 5MB) ]]        |
+|                                                             |
+| System Urgency Level: MEDIUM (Auto-computed by system)      |
+| [        Submit Diagnostic Report        ]                  |
++-------------------------------------------------------------+
+
+```
+
+#### Diagnostic Leeway Logic (Expected vs. Actual)
+
+* **Calculation:**
+
+$$\Delta P = \frac{P_{\text{expected}} - P_{\text{actual}}}{P_{\text{expected}}}$$
+
+
+* **Rule Engine:**
+* $\Delta P \le 15\%$: **Green (Optimal)** — normal variance from atmospheric scatter, dust, and temperature coefficients.
+* $15\% < \Delta P \le 30\%$: **Yellow (Minor Variance)** — flagged for cleaning or inspection.
+* $\Delta P > 30\%$ OR Hardware Alarm Bit Active: **Red (Fault Condition)** — triggers urgent diagnostic alert.
+
+
+
+#### Dynamic Form Validation & Field Rules
+
+* **Technician Name:** Plain text string (Min 3 characters, required).
+* **Incident Date:** Date-time picker, defaults to client device timestamp, allows past manual dates.
+* **Equipment Checkbox Group:** Single or multi-selection.
+* **Dynamic Fault Checkboxes:** Mutates options depending on the equipment selected:
+* *Solis Inverters:* `DC Isolation Fault`, `Grid Overvoltage`, `Inverter Over-temperature`, `String Disconnect`.
+* *PV Panels Array:* `Physical Glass Damage`, `Severe Soiling / Dust`, `Vegetation Shading`, `Connector Corrosion`.
+* *Dyness Battery Towers:* `Cell Imbalance`, `High Internal Temp (>45°C)`, `BMS Communication Timeout`, `Short Circuit Protection`.
+* *Weather Station:* `Anemometer Jammed`, `Pyranometer Soiled`, `Sensor Disconnected`.
+
+
+* **Photo Upload:** Accepts JPEG/PNG/WebP, up to 5 MB, compressed client-side before transmission.
+* **Auto-Computed Urgency:**
+* `HIGH`: Dyness BMS alarms, Sunsynk inverter lockout, or Water Pumping system impacted.
+* `MEDIUM`: Solis Inverter performance variance $> 20\%$, individual string disconnects.
+* `LOW`: Dust soiling, non-critical sensor timeouts, cosmetic damage.
+
+
+
+---
+
+## 5. Dynamic Mock Data & Simulation Engine
+
+The backend implements a lightweight physics simulation module that runs continuously. When an API client requests data, the simulator returns values computed from the real server clock time.
+
+```
++---------------------------------------------------------------+
+|                    SERVER TIME CLOCK (UTC)                    |
++---------------------------------------------------------------+
+                               |
+                               v
++---------------------------------------------------------------+
+|                   DIURNAL SOLAR MODEL                         |
+|   - Inputs: Hour of Day (0-24), Solar Zenith Angle            |
+|   - Equation: Half-sine curve from 06:00 to 18:00             |
+|   - Multiplier: Dynamic Cloud Noise factor (0.75 - 1.05)      |
+|   - Yield: Max 50.3 kWp DC -> Split across 2 Solis Inverters  |
++---------------------------------------------------------------+
+                               |
+                               v
++---------------------------------------------------------------+
+|                   ALLOCATION & LOAD DEMAND                    |
+|   - Sums active loads based on current time slot:             |
+|     * Water (9kW), Workshop (10kW), Bakery (9kW),             |
+|       Mill (10kW), Continuous Services (14kW)                 |
++---------------------------------------------------------------+
+                               |
+                               v
++---------------------------------------------------------------+
+|                   BATTERY BALANCING ENGINE                    |
+|   - Net Power = Total Solar Generated - Total Load Demanded   |
+|   - If Net > 0: Charge Dyness Towers (Max 20 kW rate)         |
+|   - If Net < 0: Discharge Dyness Towers (Max 20 kW rate)      |
+|   - Integrates kWh state across simulated hourly timesteps    |
++---------------------------------------------------------------+
+
+```
+
+### Mathematical Simulation Rules
+
+#### 1. Solar Generation Curve
+
+For hour $t \in [6.0, 18.0]$:
+
+
+$$P_{\text{ideal}}(t) = P_{\text{peak}} \times \sin\left(\pi \times \frac{t - 6}{12}\right)$$
+
+
+Where $P_{\text{peak}} = 50.3 \text{ kW}$. For $t < 6$ or $t > 18$, $P_{\text{ideal}}(t) = 0$.
+
+#### 2. Atmospheric & Temperature Degradation
+
+$$P_{\text{actual}}(t) = P_{\text{ideal}}(t) \times \eta_{\text{inverter}} \times (1 - \gamma (T_{\text{ambient}} - 25)) \times \text{Noise}(t)$$
+
+
+Where:
+
+* $\eta_{\text{inverter}} = 0.98$ (98% Solis efficiency)
+* $\gamma = 0.0035 / ^\circ\text{C}$ (PV temperature derating coefficient)
+* $T_{\text{ambient}} = 22 + 10 \times \sin\left(\pi \times \frac{t - 8}{12}\right)$
+* $\text{Noise}(t) \in [0.92, 1.02]$ (stochastic micro-fluctuation)
+
+#### 3. Battery State of Charge ($SoC$) Integration
+
+$$\Delta E = (P_{\text{generation}} - P_{\text{load}}) \times \Delta t \times \eta_{\text{battery}}$$
+
+* If charging ($P_{\text{gen}} > P_{\text{load}}$), $\eta_{\text{battery}} = 0.95$ (charging efficiency).
+* If discharging ($P_{\text{gen}} < P_{\text{load}}$), $\eta_{\text{battery}} = 1.05$ (round-trip discharge loss factor).
+* Absolute bounds: $SoC \in [10\%, 100\%]$ to reflect Dyness BMS protective depth-of-discharge cutoffs.
+
+---
+
+## 6. TypeScript Data Models & API Specifications
+
+### Core Data Models (`/types/microgrid.ts`)
+
+```typescript
+export type HealthStatus = 'OPTIMAL' | 'WARNING' | 'FAULT';
+export type UrgencyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface WeatherTelemetry {
+  ambientTemperatureCelsius: number;
+  relativeHumidityPercent: number;
+  irradianceWattsPerSquareMeter: number;
+  windSpeedMetersPerSecond: number;
+  windDirectionDegrees: number;
+  timestamp: string;
+}
+
+export interface InverterTelemetry {
+  id: 'solis_inverter_1' | 'solis_inverter_2';
+  name: string;
+  status: HealthStatus;
+  acPowerKw: number;
+  acVoltageV: number;
+  frequencyHz: number;
+  dcInputKw: number;
+  temperatureCelsius: number;
+  faultCode: string | null;
+}
+
+export interface BatteryTowerTelemetry {
+  towerId: 1 | 2;
+  moduleCount: number; // 10 units per tower
+  totalCapacityKwh: number; // 51.2 kWh per tower
+  currentSocPercent: number;
+  voltageV: number;
+  currentA: number;
+  temperatureCelsius: number;
+  isBalanced: boolean;
+  bmsStatus: HealthStatus;
+}
+
+export interface LoadAllocationItem {
+  id: string;
+  activityName: string;
+  priorityRank: 1 | 2 | 3 | 4 | 'CONTINUOUS';
+  powerDemandKw: number;
+  plannedStartTime: string; // "08:00"
+  plannedEndTime: string;   // "10:00"
+  actualStartTime?: string;
+  actualEndTime?: string;
+  isActiveNow: boolean;
+  isAdjusted: boolean;
+  adjustmentNote?: string;
+}
+
+export interface MaintenanceReportPayload {
+  technicianName: string;
+  incidentTimestamp: string;
+  equipmentIds: string[];
+  equipmentOtherDetails?: string;
+  faultTypes: string[];
+  faultOtherDetails?: string;
+  photoUrl?: string;
+  computedUrgency: UrgencyLevel;
+}
+
+```
+
+---
+
+### REST API Endpoints Specification
+
+All endpoints are prefixed with `/api/v1` and return `application/json`.
+
+#### 1. System Overview & Dashboard Status
+
+* **Route:** `GET /microgrid/overview`
+* **Description:** Aggregates real-time power generation, demand balance, weather, and battery summary.
+* **Response Contract:**
+
+```json
+{
+  "systemStatus": "OPTIMAL",
+  "totalGenerationKw": 36.4,
+  "totalLoadDemandKw": 24.0,
+  "netPowerKw": 12.4,
+  "activeLoads": [
+    "Workshop Operations",
+    "Teaching, Administration & Residential"
+  ],
+  "batterySummary": {
+    "aggregateSocPercent": 78.5,
+    "storedKwh": 80.38,
+    "usableKwh": 70.14,
+    "flowState": "CHARGING",
+    "plainTextProjection": "Batteries will reach full charge by 14:15 at current solar output."
+  },
+  "weatherSummary": {
+    "irradiance": 860,
+    "ambientTemp": 29.5,
+    "conditionLabel": "Strong Sunlight"
+  },
+  "timestamp": "2026-10-28T14:32:00Z"
+}
+
+```
+
+#### 2. Generation Forecast Curve
+
+* **Route:** `GET /microgrid/forecast/24h`
+* **Description:** Supplies 24 hourly time series points for generation visualization.
+* **Response Contract:**
+
+```json
+{
+  "date": "2026-10-28",
+  "projectedTotalYieldKwh": 278.4,
+  "peakKw": 43.8,
+  "hourlyTimeSeries": [
+    { "hour": "06:00", "generationKw": 2.1 },
+    { "hour": "07:00", "generationKw": 8.4 },
+    { "hour": "08:00", "generationKw": 18.2 },
+    { "hour": "12:00", "generationKw": 43.8 },
+    { "hour": "18:00", "generationKw": 1.2 },
+    { "hour": "19:00", "generationKw": 0.0 }
+  ],
+  "operationalAdvice": "Optimal machinery window between 10:00 and 14:30."
+}
+
+```
+
+#### 3. Energy Allocation Schedules
+
+* **Route:** `GET /microgrid/allocations?view={planned|adjusted}`
+* **Query Parameters:** `view` accepts `planned` (baseline table) or `adjusted` (live algorithm adjustments).
+* **Response Contract:**
+
+```json
+{
+  "viewType": "adjusted",
+  "totalScheduledKwh": 235.0,
+  "algorithmNotes": "Hammer mill rescheduled to 12:00 due to forecasted evening cloud cover.",
+  "items": [
+    {
+      "id": "alloc-01",
+      "activityName": "Water Pumping",
+      "priorityRank": 1,
+      "powerDemandKw": 9.0,
+      "plannedStartTime": "08:00",
+      "plannedEndTime": "10:00",
+      "actualStartTime": "08:00",
+      "actualEndTime": "10:00",
+      "isActiveNow": false,
+      "isAdjusted": false
+    },
+    {
+      "id": "alloc-04",
+      "activityName": "Hammer Mill Operations",
+      "priorityRank": 4,
+      "powerDemandKw": 10.0,
+      "plannedStartTime": "15:00",
+      "plannedEndTime": "17:00",
+      "actualStartTime": "12:00",
+      "actualEndTime": "14:00",
+      "isActiveNow": true,
+      "isAdjusted": true,
+      "adjustmentNote": "Shifted 3 hours earlier to match peak solar yield."
+    }
+  ]
+}
+
+```
+
+#### 4. Battery Storage Diagnostics
+
+* **Route:** `GET /microgrid/battery/diagnostics`
+* **Description:** Returns operational telemetry for the Sunsynk inverter and Dyness DL5.0C towers.
+* **Response Contract:**
+
+```json
+{
+  "batteryInverter": {
+    "model": "Sunsynk SUN-20K-SG05LP3-EU-SM2",
+    "operatingMode": "GRID_FORMING_ISLAND",
+    "acOutputKw": 20.0,
+    "inverterTempCelsius": 34.2,
+    "status": "OPTIMAL"
+  },
+  "towers": [
+    {
+      "towerId": 1,
+      "socPercent": 78.4,
+      "voltageV": 51.4,
+      "currentA": 45.2,
+      "tempCelsius": 28.1,
+      "health": "OPTIMAL"
+    },
+    {
+      "towerId": 2,
+      "socPercent": 78.6,
+      "voltageV": 51.3,
+      "currentA": 44.8,
+      "tempCelsius": 28.4,
+      "health": "OPTIMAL"
+    }
+  ],
+  "runtimeProjection": {
+    "projectedCutoffTimestamp": "2026-10-29T07:15:00Z",
+    "descriptiveMessage": "Batteries will comfortably support nighttime residential and teaching loads until 07:15 AM."
+  }
+}
+
+```
+
+#### 5. Fault Incident Reporting
+
+* **Route:** `POST /microgrid/maintenance/report`
+* **Content-Type:** `multipart/form-data`
+* **Payload Fields:**
+* `technicianName`: string
+* `incidentTimestamp`: string (ISO-8601)
+* `equipmentIds`: string (JSON array serialized)
+* `faultTypes`: string (JSON array serialized)
+* `equipmentOtherDetails`: string (optional)
+* `faultOtherDetails`: string (optional)
+* `photo`: binary file (optional)
+
+
+* **Response Contract:**
+
+```json
+{
+  "reportId": "REP-20261028-091",
+  "status": "LOGGED",
+  "computedUrgency": "MEDIUM",
+  "message": "Incident report logged successfully. Maintenance ticket created.",
+  "createdAt": "2026-10-28T14:32:45Z"
+}
+
+```
+
+---
+
+## 7. Infrastructure, Hosting & Deployment Configuration
+
+### AWS Lightsail Architecture Setup
+
+The platform runs on an AWS Lightsail Ubuntu 24.04 LTS instance (2 GB RAM, 1 vCPU, 60 GB SSD) behind an Nginx reverse proxy.
+
+```
+ Internet (Port 80/443)
+           |
+           v
+ +-------------------+
+ |   Nginx Router    |
+ +-------------------+
+    |             |
+    | /           | /api/v1/*
+    v             v
+ Static Web    Node.js / Express Server
+ Bundle        (localhost:5000, PM2 Cluster)
+
+```
+
+### Nginx Server Configuration (`/etc/nginx/sites-available/credit-twin`)
+
+```nginx
+server {
+    listen 80;
+    server_name credit-twin.community.local;
+
+    # Redirect all plain HTTP to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name credit-twin.community.local;
+
+    ssl_certificate /etc/letsencrypt/live/credit-twin.community.local/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/credit-twin.community.local/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # Root folder for compiled React Native Web static distribution
+    root /var/www/credit-twin/frontend/dist;
+    index index.html;
+
+    # Client-side routing fallback for React Single Page Application
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+    }
+
+    # Reverse proxy upstream to TypeScript Node.js backend
+    location /api/v1/ {
+        proxy_pass http://127.0.0.1:5000/api/v1/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # Upload limits for fault photo submissions
+        client_max_body_size 10M;
+    }
+
+    # Static assets caching rule
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+}
+
+```
+
+---
+
+## 8. Implementation Steps & Developer Acceptance Criteria
+
+### Execution Phases
+
+```
+Phase 1: Project Scaffolding & Design Foundation
+├── Initialize TypeScript monorepo (frontend/ & backend/)
+├── Setup React Native Web with Expo & React Navigation (Bottom Tabs)
+└── Implement Design System tokens (Colors, Typography, Layout containers)
+
+Phase 2: Dynamic Simulation Engine & Backend REST API
+├── Write dynamic diurnal solar physics calculation
+├── Implement battery charging/discharging state logic
+├── Seed priority load allocation schedule & adjustment toggle
+└── Build REST endpoints with Multer photo upload handling
+
+Phase 3: Screen Development & Component Integration
+├── Build Main Dashboard (Power balance hero, battery card, weather)
+├── Build Forecast View (Single-variable 24h solar area chart)
+├── Build Allocation Page (Planned vs Live view toggle & load cards)
+├── Build Battery Page (Dynamic runtime projection & dual-tower status)
+└── Build Maintenance View (Interactive SVG site map & dynamic fault form)
+
+Phase 4: Deployment & Acceptance Verification
+├── Provision AWS Lightsail instance & configure Ubuntu environment
+├── Setup Nginx reverse proxy & SSL termination
+└── Validate responsive breakpoints across mobile and desktop browsers
+
+```
+
+### Developer Acceptance Criteria
+
+* **Responsive Viewport Integrity:** Layouts must render without horizontal scrollbars across all screen widths from 360px (mobile) up to 1024px (desktop shell).
+* **Time-Synchronized Dynamic Telemetry:** Opening the webapp at 13:00 must show high solar generation (~30–45 kW) and active afternoon operations; opening the webapp at 21:00 must show 0 kW solar generation, discharging batteries, and active residential lighting.
+* **Single-Variable Chart Compliance:** The 24-hour forecast view must render only generation kW against time. No secondary axes or overlapping metrics may be added to the chart canvas.
+* **Schedule State Toggle:** The Energy Allocation screen must cleanly toggle between the standard 235 kWh baseline schedule and today's dynamically shifted schedule without page reloads.
+* **Diagnostic Fault Filtering:** On the maintenance screen, selecting an equipment item (e.g., "Solis Inverters") must restrict the fault options strictly to inverter-relevant diagnostic codes.
+* **Leeway Calculation:** Equipment output variances between 0% and 15% must retain a green status; variances between 15% and 30% must display yellow without sounding false alarm states.
+* **i18n Readiness:** 100% of display strings must reside in a structured JSON translation catalog (e.g., `locales/en.json`) to allow immediate drop-in replacement with local language dictionaries in Phase 2.
