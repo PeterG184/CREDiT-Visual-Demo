@@ -1,0 +1,157 @@
+{
+  "common": {
+    "appName": "CREDiT Digital Twin",
+    "status": {
+      "optimal": "Yabwino Kwambiri",
+      "normal": "Yabwino",
+      "warning": "Kusamala / Chenjezo",
+      "fault": "Chovuta / Vuto",
+      "charging": "Kulipira ku Dzuwa",
+      "discharging": "Kutulutsa Mphamvu",
+      "idle": "Pakati / Yoyima",
+      "active": "Kugwira Ntchito",
+      "scheduled": "Yokonzedwa",
+      "completed": "Yatsirizidwa",
+      "continuous": "Kugwira Mosalekeza"
+    },
+    "units": {
+      "kw": "kW",
+      "kwh": "kWh",
+      "volts": "V",
+      "amps": "A",
+      "celsius": "°C",
+      "wm2": "W/m²",
+      "percent": "%",
+      "ms": "m/s"
+    },
+    "demo": {
+      "title": "Kuwongolera Nthawi ya Simulation",
+      "live": "Nthawi Yeniyeni",
+      "morning": "08:30 M'mawa",
+      "midday": "12:30 Dzuwa Lalikulu",
+      "evening": "16:30 Madzulo",
+      "night": "21:30 Usiku",
+      "simulated": "Nthawi Yoyerekeza"
+    }
+  },
+  "nav": {
+    "dashboard": "Mwachidule",
+    "forecast": "Zoneneratu",
+    "allocation": "Kugawa",
+    "battery": "Batire",
+    "maintenance": "Kukonza"
+  },
+  "dashboard": {
+    "title": "Chidule cha Microgrid",
+    "systemHealth": "Maimidwe a Makina",
+    "powerBalance": {
+      "title": "Kusamala kwa Mphamvu (Panopa)",
+      "generating": "Kupanga",
+      "using": "Kugwiritsa Ntchito",
+      "net": "Mphamvu Yeniyeni",
+      "currentlyPowering": "Kupereka Mphamvu ku"
+    },
+    "battery": {
+      "title": "Kusungira Mabatire",
+      "capacity": "Mphamvu Zonse",
+      "status": "Maimidwe a Batire"
+    },
+    "weather": {
+      "title": "Zanyengo",
+      "irradiance": "Mphamvu ya Dzuwa",
+      "temperature": "Kutentha",
+      "humidity": "Chinyezi",
+      "wind": "Mphepo",
+      "conditions": {
+        "overcast": "Dzuwa lochepa / Mitambo",
+        "moderate": "Dzuwa lapakati",
+        "strong": "Dzuwa lamphamvu"
+      }
+    }
+  },
+  "forecast": {
+    "title": "Zoneneratu za Magetsi a Maola 24",
+    "peakProduction": "Kupanga Kwapamwamba Koyembekezeka",
+    "estimatedDailyYield": "Kupanga Konse kwa Tsiku",
+    "chartTitle": "Kupanga kwa Dzuwa pa Ola Limodzi",
+    "chartYAxis": "Magetsi (kW)",
+    "chartXAxis": "Nthawi ya Tsiku",
+    "summaryTitle": "Chidule cha Zoneneratu",
+    "periods": {
+      "morning": "M'mawa (06:00 - 11:00): Kumwamba koyera, kupanga kwakukulu",
+      "midday": "Masana (11:00 - 15:00): Mphamvu yapamwamba, yabwino kwa makina akulu",
+      "afternoon": "Madzulo (15:00 - 18:00): Kuchepa pang'onopang'ono kwa dzuwa",
+      "night": "Usiku: Kupanga kudzayambanso nthawi ya 06:15 mawa"
+    }
+  },
+  "allocation": {
+    "title": "Ndondomeko Yogawa Mphamvu",
+    "standardPlan": "Ndondomeko Yanthawi Zonse",
+    "liveSchedule": "Ndondomeko ya Lero",
+    "adjustedNotice": "Maimidwe a Panopa: Zosinthidwa molingana ndi nyengo ndi mabatire",
+    "timelineTitle": "Ndondomeko ya Maola 24 ya Ntchito Zokonzedwa",
+    "table": {
+      "priority": "Kufunika",
+      "activity": "Ntchito",
+      "window": "Nthawi Yogwira",
+      "load": "Mphamvu Yofunika",
+      "duration": "Kutalika kwa Nthawi",
+      "status": "Maimidwe"
+    },
+    "items": {
+      "water": "Kupopa Madzi",
+      "workshop": "Ntchito za Workshop",
+      "bakery": "Kuphika Buledi",
+      "mill": "Chigayo cha Chimanga",
+      "continuous": "Zophunzitsa, Maofesi & Nyumba"
+    }
+  },
+  "battery": {
+    "title": "Makina Osungira Mabatire",
+    "totalCapacity": "Mphamvu Zonse",
+    "currentStored": "Zosungidwa Panopa",
+    "netPowerFlow": "Kuyenda kwa Mphamvu",
+    "runtimeProjectionTitle": "Nthawi Yotsala ya Mabatire",
+    "historyTitle": "Mabatire M'maola 24 Apitawa (State of Charge %)",
+    "towers": {
+      "tower1": "Maimidwe a Tower 1",
+      "tower2": "Maimidwe a Tower 2",
+      "modules": "Ma Module 10 a Dyness DL5.0C Pro",
+      "soc": "SoC",
+      "temp": "Kutentha",
+      "voltage": "Voltage",
+      "current": "Current",
+      "health": "Thanzi",
+      "balanced": "Zolumikizana Bwino",
+      "unbalanced": "Onani Kulumikizana"
+    }
+  },
+  "maintenance": {
+    "title": "Kuyang'anira Malo & Mayesero a Makina",
+    "inverterChartTitle": "Kagwiridwe Ntchito ka ma Inverter: Zoyembekezeka ndi Zenizeni (kW)",
+    "varianceChartTitle": "Kusiyana kwa ma Inverter (%)",
+    "equipment": {
+      "pv": "Gulu la ma Panel (86 Panels / 50.3 kWp)",
+      "weather": "Chida cha Nyengo",
+      "solis1": "Inverter 1 (Solis 17kW)",
+      "solis2": "Inverter 2 (Solis 17kW)",
+      "sunsynk": "Inverter ya Batire (Sunsynk 20kW)",
+      "towers": "Ma Tower 1 & 2 a Dyness ESS"
+    },
+    "form": {
+      "title": "Tumizani Lipoti la Mavuto / Kukonza",
+      "techName": "Dzina la Katswiri Wokonza",
+      "techPlaceholder": "Lembani dzina lonse la katswiri",
+      "incidentDate": "Tsiku ndi Nthawi ya Vuto",
+      "equipmentSelect": "Makina Okhudzidwa (Sankhani onse okhudzidwa)",
+      "otherEquipment": "Ndemanga Zina za Makina",
+      "faultSelect": "Vuto Lapadera Lowonedwa",
+      "otherFault": "Ndemanga Zina za Vuto",
+      "photoUpload": "Kukweza Chithunzi cha Chida (Mocked)",
+      "photoButton": "Sankhani Fayilo ya Chithunzi (Kupitirira 5MB ayi)",
+      "urgency": "Mlingo Wofunika Kuchitapo Kanthu (Wowerengedwa)",
+      "submitButton": "Tumizani Lipoti Lotsimikizika",
+      "successMessage": "Lipoti la vuto latumizidwa bwino. Tiketi yokonza yapangidwa."
+    }
+  }
+}

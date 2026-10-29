@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 import useSimulation from '../services/SimulationContext';
-import { t } from '../services/i18n';
+import { t, AVAILABLE_LOCALES, LocaleCode } from '../services/i18n';
 
 export const Header: React.FC = () => {
   const {
@@ -13,9 +14,12 @@ export const Header: React.FC = () => {
     setSimulatedHour,
     formattedTime,
     overview,
+    locale,
+    setLocale,
   } = useSimulation();
 
   const [showControls, setShowControls] = useState<boolean>(false);
+  const [showLanguageMenu, setShowLanguageMenu] = useState<boolean>(false);
 
   // Time preset buttons
   const presets = [
@@ -78,14 +82,86 @@ export const Header: React.FC = () => {
           {/* Time Button Toggle */}
           <TouchableOpacity
             style={[styles.timeButton, showControls && styles.timeButtonActive]}
-            onPress={() => setShowControls(!showControls)}
+            onPress={() => {
+              setShowControls(!showControls);
+              if (showLanguageMenu) setShowLanguageMenu(false);
+            }}
             accessibilityRole="button"
           >
             <Text style={styles.timeLabel}>
               {isLiveMode ? `Live (${formattedTime})` : `Sim: ${formattedTime}`}
             </Text>
-            <Text style={styles.timeToggleArrow}>{showControls ? '▲' : '▼'}</Text>
+            <Feather
+              name={showControls ? 'chevron-up' : 'chevron-down'}
+              size={12}
+              color={Colors.textSecondary}
+            />
           </TouchableOpacity>
+
+          {/* Language Selector Dropdown (Option 1: Far-Right Utility Position) */}
+          <View style={styles.langWrapper}>
+            <TouchableOpacity
+              style={[styles.langButton, showLanguageMenu && styles.langButtonActive]}
+              onPress={() => {
+                setShowLanguageMenu(!showLanguageMenu);
+                if (showControls) setShowControls(false);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Select language"
+            >
+              <Feather name="globe" size={13} color={Colors.accentSky} />
+              <Text style={styles.langLabel}>
+                {locale === 'ny' ? 'Chichewa' : 'English'}
+              </Text>
+              <Feather
+                name={showLanguageMenu ? 'chevron-up' : 'chevron-down'}
+                size={11}
+                color={Colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {/* Floating Dropdown Menu */}
+            {showLanguageMenu && (
+              <View style={styles.langDropdown}>
+                {AVAILABLE_LOCALES.map((loc) => {
+                  const isSelected = loc.code === locale;
+                  return (
+                    <TouchableOpacity
+                      key={loc.code}
+                      style={[styles.langOption, isSelected && styles.langOptionSelected]}
+                      onPress={() => {
+                        setLocale(loc.code);
+                        setShowLanguageMenu(false);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.langOptionLeft}>
+                        <Text
+                          style={[
+                            styles.langOptionCode,
+                            isSelected && styles.langOptionCodeSelected,
+                          ]}
+                        >
+                          {loc.code.toUpperCase()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.langOptionLabel,
+                            isSelected && styles.langOptionLabelSelected,
+                          ]}
+                        >
+                          {loc.nativeLabel}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <Feather name="check" size={14} color={Colors.accentSky} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
@@ -269,9 +345,85 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textPrimary,
   },
-  timeToggleArrow: {
-    fontSize: 9,
-    color: Colors.textSecondary,
+  langWrapper: {
+    position: 'relative',
+    zIndex: 50,
+  },
+  langButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.bgBase,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    gap: 6,
+  },
+  langButtonActive: {
+    backgroundColor: Colors.cardActiveBg,
+    borderColor: Colors.cardActiveBorder,
+  },
+  langLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  langDropdown: {
+    position: 'absolute',
+    top: 36,
+    right: 0,
+    backgroundColor: Colors.bgSurface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    paddingVertical: 6,
+    minWidth: 170,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 100,
+  },
+  langOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  langOptionSelected: {
+    backgroundColor: Colors.accentSkySubtle,
+  },
+  langOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langOptionCode: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    backgroundColor: Colors.bgBase,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
+  langOptionCodeSelected: {
+    color: Colors.accentSky,
+    borderColor: Colors.accentSky,
+  },
+  langOptionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  langOptionLabelSelected: {
+    color: Colors.accentSky,
+    fontWeight: '700',
   },
   controlsPanel: {
     backgroundColor: Colors.bgBase,

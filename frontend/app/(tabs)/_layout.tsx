@@ -4,8 +4,11 @@ import { StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
 import { t } from '../../services/i18n';
+import useSimulation from '../../services/SimulationContext';
 
 export default function TabLayout() {
+  const { locale } = useSimulation();
+
   return (
     <Tabs
       screenOptions={{

@@ -8,6 +8,7 @@ import {
 } from '../types/microgrid';
 import ApiService from './api';
 import * as simulator from './simulator';
+import { LocaleCode, getLocale, setLocale as setI18nLocale, subscribeLocale } from './i18n';
 
 interface SimulationContextType {
   currentHour: number;
@@ -19,6 +20,8 @@ interface SimulationContextType {
   allocations: AllocationResponse;
   battery: BatteryDiagnosticsResponse;
   inverters: InverterTelemetry[];
+  locale: LocaleCode;
+  setLocale: (loc: LocaleCode) => void;
   setLiveMode: (live: boolean) => void;
   setSimulatedHour: (hour: number) => void;
   setActiveScheduleView: (view: 'planned' | 'adjusted') => void;
@@ -38,6 +41,18 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [currentHour, setCurrentHour] = useState<number>(getNowHour());
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
   const [activeScheduleView, setActiveScheduleView] = useState<'planned' | 'adjusted'>('adjusted');
+  const [locale, setLocaleState] = useState<LocaleCode>(getLocale());
+
+  useEffect(() => {
+    return subscribeLocale((newLoc) => {
+      setLocaleState(newLoc);
+    });
+  }, []);
+
+  const changeLocale = useCallback((newLoc: LocaleCode) => {
+    setI18nLocale(newLoc);
+    setLocaleState(newLoc);
+  }, []);
 
   // Telemetry state initialized with simulator data
   const [overview, setOverview] = useState<OverviewTelemetry>(() =>
@@ -134,6 +149,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         allocations,
         battery,
         inverters,
+        locale,
+        setLocale: changeLocale,
         setLiveMode: handleSetLiveMode,
         setSimulatedHour: handleSetSimulatedHour,
         setActiveScheduleView: handleScheduleViewChange,
