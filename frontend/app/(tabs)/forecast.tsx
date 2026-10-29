@@ -63,7 +63,7 @@ export default function ForecastScreen() {
             <Text style={[styles.kpiValue, { color: Colors.batteryHealthy }]}>12.2</Text>
             <Text style={styles.kpiUnit}>hrs</Text>
           </View>
-          <Text style={styles.kpiSubtext}>06:12 AM to 18:24 PM</Text>
+          <Text style={styles.kpiSubtext}>06:12 AM to 06:24 PM</Text>
         </View>
 
         <View style={styles.kpiCard}>
@@ -100,15 +100,6 @@ export default function ForecastScreen() {
       {forecast.sevenDayOutlook && (
         <SevenDayOutlook outlook={forecast.sevenDayOutlook} />
       )}
-
-      {/* Operational Recommendation Banner */}
-      <View style={styles.adviceBanner}>
-        <View style={styles.adviceDot} />
-        <View style={styles.adviceContent}>
-          <Text style={styles.adviceTitle}>{t('forecast.operationalAdvice')}</Text>
-          <Text style={styles.adviceBody}>{forecast.operationalAdvice}</Text>
-        </View>
-      </View>
     </ScrollView>
   );
 }
@@ -204,39 +195,6 @@ const styles = StyleSheet.create({
   kpiSubtext: {
     fontSize: 11,
     color: Colors.textMuted,
-    fontFamily: FONT_FAMILY,
-  },
-  adviceBanner: {
-    flexDirection: 'row',
-    backgroundColor: Colors.sunSubtle,
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.sunPrimary,
-    gap: 10,
-    alignItems: 'flex-start',
-  },
-  adviceDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.sunPrimary,
-    marginTop: 4,
-  },
-  adviceContent: {
-    flex: 1,
-    gap: 2,
-  },
-  adviceTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    fontFamily: FONT_FAMILY,
-  },
-  adviceBody: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 18,
     fontFamily: FONT_FAMILY,
   },
 });

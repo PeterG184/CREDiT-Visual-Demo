@@ -62,6 +62,22 @@ export function getLiveStochasticNoise(t: number): {
 }
 
 /**
+ * Formats a decimal hour (0.0 to 24.0) into proper 12-hour AM/PM clock time (e.g. 7.25 -> "07:15 AM", 14.85 -> "02:51 PM")
+ */
+export function formatClockTime(decimalHour: number): string {
+  const norm = ((decimalHour % 24) + 24) % 24;
+  let h24 = Math.floor(norm);
+  let m = Math.round((norm - h24) * 60);
+  if (m >= 60) {
+    h24 = (h24 + 1) % 24;
+    m = 0;
+  }
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+/**
  * Ambient air temperature (°C)
  */
 export function getAmbientTemp(t: number): number {
@@ -481,17 +497,17 @@ export function getOverviewTelemetry(t: number): OverviewTelemetry {
       const effectiveChargeRate = Math.min(netKw * sunsynkEfficiency, MAX_BATTERY_RATE_KW);
       const hoursRemaining = effectiveChargeRate > 0 ? chargeNeededKwh / effectiveChargeRate : 2;
       const finishHour = (t + hoursRemaining) % 24;
-      const fh = Math.floor(finishHour);
-      const fm = Math.round((finishHour - fh) * 60);
-      plainTextProjection = `Batteries will reach full charge by ${String(fh).padStart(2, '0')}:${String(fm).padStart(2, '0')} at current solar output.`;
+      plainTextProjection = `Batteries will reach full charge by ${formatClockTime(finishHour)} at current solar output.`;
     }
   } else {
-    const nightLoad = Math.max(10, totalLoadKw);
-    const hoursLeft = nightLoad > 0 ? usableKwh / nightLoad : 8;
+    const activeLoad = Math.max(10, totalLoadKw);
+    const hoursLeft = activeLoad > 0 ? usableKwh / activeLoad : 8;
     const cutoffHour = (t + hoursLeft) % 24;
-    const ch = Math.floor(cutoffHour);
-    const cm = Math.round((cutoffHour - ch) * 60);
-    plainTextProjection = `Batteries will comfortably support nighttime residential and teaching loads until ${String(ch).padStart(2, '0')}:${String(cm).padStart(2, '0')} AM.`;
+    const timeStr = formatClockTime(cutoffHour);
+    const isNight = t >= 18 || t < 6;
+    plainTextProjection = isNight
+      ? `Batteries will comfortably support nighttime residential and teaching loads until ${timeStr}.`
+      : `Stored battery energy will support current loads until ${timeStr}.`;
   }
 
   let conditionLabel = 'Low Sun / Overcast';
@@ -661,7 +677,7 @@ export function getForecastData(simulatedHour: number = 12.0): ForecastResponse 
     dewPointCelsius: Math.round((nowAmb - (100 - nowHum) / 5) * 10) / 10,
     cloudCoverPercent: simulatedHour >= 6 && simulatedHour <= 18 ? 12 : 25,
     sunriseTime: '06:12 AM',
-    sunsetTime: '18:24 PM',
+    sunsetTime: '06:24 PM',
     daylightDuration: '12h 12m',
     solarZenithTime: '12:18 PM',
     precipitationRiskPercent: 5,
@@ -825,10 +841,7 @@ export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse 
 
   const soc = getBatterySocAtHour(hour);
   const usableKwh = Math.max(0, (TOTAL_STORAGE_KWH * soc) / 100 - RESERVE_FLOOR_KWH);
-  const hoursLeft = usableKwh / 14;
-  const cutoffH = (hour + hoursLeft) % 24;
-  const ch = Math.floor(cutoffH);
-  const cm = Math.round((cutoffH - ch) * 60);
+  const storedKwh = (TOTAL_STORAGE_KWH * soc) / 100;
 
   // Compute battery DC current based on net power through Sunsynk converter
   const sunsynkEff = netKw >= 0 ? 0.965 : 0.958;
@@ -849,6 +862,35 @@ export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse 
   const vOffset = netKw > 0 ? (totalBatteryCurrentA / 200) * 0.4 : -(totalBatteryCurrentA / 200) * 0.4;
   const voltage1 = Math.round((51.3 + vOffset) * 10) / 10;
   const voltage2 = Math.round((51.2 + vOffset) * 10) / 10;
+
+  let projectedCutoffTimestamp = '';
+  let descriptiveMessage = '';
+
+  if (netKw >= 0.8) {
+    const chargeNeededKwh = TOTAL_STORAGE_KWH * 0.95 - storedKwh;
+    if (chargeNeededKwh <= 0) {
+      projectedCutoffTimestamp = 'Fully Charged';
+      descriptiveMessage = 'Batteries are fully charged at 95% protective threshold. Solar generation safely covers campus loads.';
+    } else {
+      const sunsynkEfficiency = 0.965;
+      const effectiveChargeRate = Math.min(netKw * sunsynkEfficiency, MAX_BATTERY_RATE_KW);
+      const hoursRemaining = effectiveChargeRate > 0 ? chargeNeededKwh / effectiveChargeRate : 2;
+      const finishHour = (hour + hoursRemaining) % 24;
+      const timeStr = formatClockTime(finishHour);
+      projectedCutoffTimestamp = timeStr;
+      descriptiveMessage = `Solar surplus is actively charging storage. Batteries are projected to reach full capacity by ${timeStr}.`;
+    }
+  } else {
+    const activeLoad = Math.max(10, totalLoadKw);
+    const hoursLeft = activeLoad > 0 ? usableKwh / activeLoad : 8;
+    const cutoffH = (hour + hoursLeft) % 24;
+    const timeStr = formatClockTime(cutoffH);
+    projectedCutoffTimestamp = timeStr;
+    const isNight = hour >= 18 || hour < 6;
+    descriptiveMessage = isNight
+      ? `Batteries will comfortably support nighttime residential and teaching loads until ${timeStr}.`
+      : `Stored battery energy will support current microgrid loads until ${timeStr}.`;
+  }
 
   return {
     batteryInverter: {
@@ -884,8 +926,8 @@ export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse 
     ],
     history24h: getPast24HoursBattery(hour),
     runtimeProjection: {
-      projectedCutoffTimestamp: `07:15 AM`,
-      descriptiveMessage: `Batteries will comfortably support nighttime residential and teaching loads until ${String(ch).padStart(2, '0')}:${String(cm).padStart(2, '0')} AM.`,
+      projectedCutoffTimestamp,
+      descriptiveMessage,
     },
   };
 }

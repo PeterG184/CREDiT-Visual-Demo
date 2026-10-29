@@ -76,7 +76,6 @@ export const SevenDayOutlook: React.FC<SevenDayOutlookProps> = ({ outlook }) => 
                   />
                   <Text style={styles.conditionText}>{day.conditionLabel}</Text>
                 </View>
-                <Text style={styles.suitabilityText}>{day.operationalSuitability}</Text>
               </View>
 
               {/* Temperature Range */}
@@ -264,11 +263,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.textPrimary,
-    fontFamily: FONT_FAMILY,
-  },
-  suitabilityText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
     fontFamily: FONT_FAMILY,
   },
   tempCol: {

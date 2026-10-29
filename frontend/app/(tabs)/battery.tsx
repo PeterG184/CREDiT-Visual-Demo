@@ -68,7 +68,10 @@ export default function BatteryScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{t('battery.runtimeProjectionTitle')}</Text>
           <View style={styles.projectedBadge}>
-            <Text style={styles.projectedBadgeText}>Depletion: {runtimeProjection.projectedCutoffTimestamp}</Text>
+            <Text style={styles.projectedBadgeText}>
+              {batterySummary.flowState === 'CHARGING' ? 'Full Charge: ' : 'Depletion: '}
+              {runtimeProjection.projectedCutoffTimestamp}
+            </Text>
           </View>
         </View>
 
