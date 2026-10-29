@@ -11,7 +11,9 @@ web-build/
 
 # Build artifacts & logs
 build/
+dist/
 coverage/
+uploads/
 *.log
 npm-debug.log*
 yarn-debug.log*
