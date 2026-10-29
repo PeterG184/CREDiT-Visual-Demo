@@ -10,24 +10,56 @@ import {
 
 // Hardware Specifications from design_spec.txt
 const P_PEAK = 50.3; // kW (86 x 585W monocrystalline panels)
-const INVERTER_EFFICIENCY = 0.98; // 98% Solis efficiency
-const TEMP_COEFF = 0.0035; // 0.35%/°C derating above 25°C
 const TOTAL_STORAGE_KWH = 102.4; // Dyness ESS (2 x 51.2 kWh towers)
 const RESERVE_FLOOR_KWH = 10.24; // 10% DoD protective reserve
 const MAX_BATTERY_RATE_KW = 20.0; // Sunsynk 20kW continuous rating
+const TEMP_COEFF_PV = 0.0035; // 0.35%/°C PV temperature derating above 25°C
 
 /**
- * Deterministic pseudo-noise function based on hour t
- * Provides smooth, organic micro-fluctuations (0.95 - 1.02)
+ * Returns dynamic stochastic noise that blends deterministic time-of-day curves
+ * with live timestamp drifting jitter so successive polls breathe organically.
  */
-export function getPseudoNoise(t: number): number {
-  const sinVal = Math.sin(t * 12.345 + 0.5);
-  return 0.96 + 0.04 * Math.abs(sinVal);
+export function getLiveStochasticNoise(t: number): {
+  irradianceJitter: number;
+  windSpeed: number;
+  windDirectionDegrees: number;
+  loadJitter: number;
+  inverterJitter1: number;
+  inverterJitter2: number;
+} {
+  // Use real-time seconds drift for organic micro-variations
+  const timeSec = Date.now() / 1000;
+  
+  // Slow cloud drift wave (period ~40s) + faster atmospheric turbulence
+  const cloudWave = 0.03 * Math.sin(timeSec / 15 + t * 4) + 0.015 * Math.cos(timeSec / 7 + t * 8);
+  const irradianceJitter = Math.max(0.88, Math.min(1.04, 1.0 + cloudWave));
+
+  // Wind speed oscillating around 3.2 m/s with gusts up to 4.8 m/s
+  const windWave = 0.8 * Math.sin(timeSec / 12 + t * 3) + 0.4 * Math.cos(timeSec / 5);
+  const windSpeed = Math.round(Math.max(1.2, 3.2 + windWave) * 10) / 10;
+
+  // Wind direction oscillating around North-East (45°) between 35° and 55°
+  const windDirectionDegrees = Math.round(45 + 8 * Math.sin(timeSec / 20));
+
+  // Motor load jitter (saw blade engagement, pump pressure variance, etc.)
+  const loadJitter = 1.0 + 0.03 * Math.sin(timeSec / 9 + t * 5);
+
+  // Inverter electrical noise
+  const inverterJitter1 = 1.0 + 0.012 * Math.sin(timeSec / 4 + 1.1);
+  const inverterJitter2 = 1.0 + 0.015 * Math.sin(timeSec / 4 + 2.7);
+
+  return {
+    irradianceJitter,
+    windSpeed,
+    windDirectionDegrees,
+    loadJitter,
+    inverterJitter1,
+    inverterJitter2,
+  };
 }
 
 /**
- * Diurnal ambient temperature model (°C)
- * Peak temperature occurs around 14:00 - 15:00
+ * Ambient air temperature (°C)
  */
 export function getAmbientTemp(t: number): number {
   if (t >= 6 && t <= 20) {
@@ -37,7 +69,7 @@ export function getAmbientTemp(t: number): number {
 }
 
 /**
- * Ideal solar power at hour t (0-24) based on half-sine diurnal equation
+ * Theoretical ideal solar DC output under standard test conditions (STC 1000 W/m², 25°C)
  */
 export function getIdealSolarKw(t: number): number {
   if (t < 6.0 || t > 18.0) return 0.0;
@@ -45,28 +77,177 @@ export function getIdealSolarKw(t: number): number {
 }
 
 /**
- * Actual solar power with temperature derating and inverter efficiency
+ * Global Horizontal Irradiance in W/m² with cloud noise
  */
-export function getActualSolarKw(t: number): number {
-  const ideal = getIdealSolarKw(t);
-  if (ideal <= 0) return 0.0;
-
-  const temp = getAmbientTemp(t);
-  const tempDerating = 1.0 - TEMP_COEFF * (temp - 25.0);
-  const noise = getPseudoNoise(t);
-
-  const actual = ideal * INVERTER_EFFICIENCY * tempDerating * noise;
-  return Math.max(0, Math.round(actual * 10) / 10);
-}
-
-/**
- * Global Horizontal Irradiance in W/m²
- */
-export function getIrradiance(t: number): number {
+export function getIrradiance(t: number, noiseFactor = 1.0): number {
   const ideal = getIdealSolarKw(t);
   if (ideal <= 0) return 0;
   const ratio = ideal / P_PEAK;
-  return Math.round(ratio * 920 * getPseudoNoise(t));
+  return Math.round(ratio * 920 * noiseFactor);
+}
+
+/**
+ * PV Cell Temperature Calculation (NOCT Model with wind cooling effect)
+ * Cell temperature rises well above ambient in strong sun, reducing voltage
+ */
+export function getPvCellTemp(ambientTemp: number, irradiance: number, windSpeed: number): number {
+  if (irradiance <= 0) return ambientTemp;
+  // Wind cooling reduces thermal build-up on panels
+  const windCooling = 1.0 - 0.03 * Math.min(4, Math.max(0, windSpeed - 1.0));
+  const cellTemp = ambientTemp + ((45 - 20) / 800) * irradiance * windCooling;
+  return Math.round(cellTemp * 10) / 10;
+}
+
+/**
+ * Dynamic Inverter Efficiency Curve
+ * Realistic power electronics efficiency depends on load ratio (chi = P_dc / P_rated)
+ * At low power (< 10%), efficiency drops due to tare/magnetizing losses
+ * At mid-high load (35-80%), peak efficiency reaches ~98.4%
+ * High load causes slight resistive derating
+ */
+export function getInverterEfficiency(dcKw: number, ratedKw = 17.0, tempCelsius = 35.0): number {
+  if (dcKw <= 0.1) return 0.88;
+  const loadRatio = Math.min(1.2, dcKw / ratedKw);
+
+  // Base efficiency curve
+  let eff = 0.984 - 0.07 * Math.pow(1.0 - Math.min(1.0, loadRatio), 2.5);
+
+  // Thermal derating if inverter heatsink runs too hot (> 45°C)
+  if (tempCelsius > 45.0) {
+    const thermalPenalty = (tempCelsius - 45.0) * 0.003;
+    eff -= thermalPenalty;
+  }
+
+  return Math.max(0.85, Math.min(0.986, eff));
+}
+
+/**
+ * Multi-equipment coupled generation calculation:
+ * - Computes irradiance and PV cell temperature
+ * - Models DC array output derated by cell temperature
+ * - Splits DC power between Solis Inverter 1 (clean) and Inverter 2 (soiled / variance)
+ * - Evaluates individual inverter load ratios, heat loss, and AC conversion efficiency
+ */
+export function calculateEquipmentGeneration(t: number): {
+  irradiance: number;
+  ambientTemp: number;
+  cellTemp: number;
+  windSpeed: number;
+  windDirectionDegrees: number;
+  inverter1: {
+    dcInputKw: number;
+    acPowerKw: number;
+    efficiency: number;
+    heatsinkTemp: number;
+    expectedPowerKw: number;
+    variancePercent: number;
+  };
+  inverter2: {
+    dcInputKw: number;
+    acPowerKw: number;
+    efficiency: number;
+    heatsinkTemp: number;
+    expectedPowerKw: number;
+    variancePercent: number;
+  };
+  totalActualAcKw: number;
+  totalDcGrossKw: number;
+} {
+  const noise = getLiveStochasticNoise(t);
+  const ambientTemp = getAmbientTemp(t);
+  const idealSolar = getIdealSolarKw(t);
+  const irradiance = getIrradiance(t, noise.irradianceJitter);
+  const cellTemp = getPvCellTemp(ambientTemp, irradiance, noise.windSpeed);
+
+  if (idealSolar <= 0 || irradiance <= 0) {
+    return {
+      irradiance: 0,
+      ambientTemp,
+      cellTemp: ambientTemp,
+      windSpeed: noise.windSpeed,
+      windDirectionDegrees: noise.windDirectionDegrees,
+      inverter1: {
+        dcInputKw: 0,
+        acPowerKw: 0,
+        efficiency: 0.98,
+        heatsinkTemp: ambientTemp + 2,
+        expectedPowerKw: 0,
+        variancePercent: 0,
+      },
+      inverter2: {
+        dcInputKw: 0,
+        acPowerKw: 0,
+        efficiency: 0.97,
+        heatsinkTemp: ambientTemp + 3,
+        expectedPowerKw: 0,
+        variancePercent: 0,
+      },
+      totalActualAcKw: 0,
+      totalDcGrossKw: 0,
+    };
+  }
+
+  // PV Temperature Derating: (1 - 0.0035 * (T_cell - 25°C))
+  const pvTempDerate = Math.max(0.75, 1.0 - TEMP_COEFF_PV * (cellTemp - 25.0));
+
+  // Gross DC power generated by the 86 panels before inverter conversion
+  const totalDcGrossKw = idealSolar * pvTempDerate * noise.irradianceJitter;
+
+  // Expected AC output per inverter (STC benchmark 50% split)
+  const expectedPerInverter = Math.round((idealSolar * 0.5) * 10) / 10;
+
+  // Inverter 1: Clean array (strings 1-4, 98.5% cleanliness factor)
+  const dcIn1 = (totalDcGrossKw * 0.515 * 0.985) * noise.inverterJitter1;
+  const temp1Base = ambientTemp + (dcIn1 / 17.0) * 11.0;
+  const eff1 = getInverterEfficiency(dcIn1, 17.0, temp1Base);
+  const acPower1 = Math.round(dcIn1 * eff1 * 10) / 10;
+  const loss1 = Math.max(0, dcIn1 - acPower1);
+  const heatsinkTemp1 = Math.round((temp1Base + loss1 * 6.5) * 10) / 10;
+  const variance1 =
+    expectedPerInverter > 0
+      ? Math.max(0, Math.round(((expectedPerInverter - acPower1) / expectedPerInverter) * 100))
+      : 0;
+
+  // Inverter 2: Minor soiling / dust accumulation near road & humming cooling fan
+  // Cleanliness ~84.5% + higher internal heat dissipation -> produces 15-20% leeway variance
+  const dcIn2 = (totalDcGrossKw * 0.485 * 0.845) * noise.inverterJitter2;
+  const temp2Base = ambientTemp + (dcIn2 / 17.0) * 15.0 + 3.0; // Runs hotter due to fan degradation
+  const eff2 = getInverterEfficiency(dcIn2, 17.0, temp2Base);
+  const acPower2 = Math.round(dcIn2 * eff2 * 10) / 10;
+  const loss2 = Math.max(0, dcIn2 - acPower2);
+  const heatsinkTemp2 = Math.round((temp2Base + loss2 * 8.5) * 10) / 10;
+  const variance2 =
+    expectedPerInverter > 0
+      ? Math.max(0, Math.round(((expectedPerInverter - acPower2) / expectedPerInverter) * 100))
+      : 0;
+
+  const totalActualAcKw = Math.round((acPower1 + acPower2) * 10) / 10;
+
+  return {
+    irradiance,
+    ambientTemp,
+    cellTemp,
+    windSpeed: noise.windSpeed,
+    windDirectionDegrees: noise.windDirectionDegrees,
+    inverter1: {
+      dcInputKw: Math.round(dcIn1 * 10) / 10,
+      acPowerKw: acPower1,
+      efficiency: Math.round(eff1 * 1000) / 10,
+      heatsinkTemp: heatsinkTemp1,
+      expectedPowerKw: expectedPerInverter,
+      variancePercent: variance1,
+    },
+    inverter2: {
+      dcInputKw: Math.round(dcIn2 * 10) / 10,
+      acPowerKw: acPower2,
+      efficiency: Math.round(eff2 * 1000) / 10,
+      heatsinkTemp: heatsinkTemp2,
+      expectedPowerKw: expectedPerInverter,
+      variancePercent: variance2,
+    },
+    totalActualAcKw,
+    totalDcGrossKw: Math.round(totalDcGrossKw * 10) / 10,
+  };
 }
 
 // Baseline Standard Schedule (235 kWh/day)
@@ -202,6 +383,7 @@ export function getAllocationsForTime(
   viewType: 'planned' | 'adjusted' = 'adjusted'
 ): { items: LoadAllocationItem[]; totalLoadKw: number; activeLoads: { name: string; powerKw: number }[] } {
   const source = viewType === 'planned' ? STANDARD_ALLOCATIONS : ADJUSTED_ALLOCATIONS;
+  const noise = getLiveStochasticNoise(hour);
 
   let totalLoadKw = 0;
   const activeLoads: { name: string; powerKw: number }[] = [];
@@ -211,18 +393,24 @@ export function getAllocationsForTime(
     const endStr = item.actualEndTime || item.plannedEndTime;
     const isActive = isTimeInWindow(hour, startStr, endStr);
 
+    // Apply motor load micro-fluctuation to active machinery
+    const liveLoadKw = isActive
+      ? Math.round(item.powerDemandKw * noise.loadJitter * 10) / 10
+      : item.powerDemandKw;
+
     if (isActive) {
-      totalLoadKw += item.powerDemandKw;
-      activeLoads.push({ name: item.activityName, powerKw: item.powerDemandKw });
+      totalLoadKw += liveLoadKw;
+      activeLoads.push({ name: item.activityName, powerKw: liveLoadKw });
     }
 
     return {
       ...item,
+      powerDemandKw: liveLoadKw,
       isActiveNow: isActive,
     };
   });
 
-  return { items, totalLoadKw, activeLoads };
+  return { items, totalLoadKw: Math.round(totalLoadKw * 10) / 10, activeLoads };
 }
 
 /**
@@ -230,15 +418,15 @@ export function getAllocationsForTime(
  */
 export function getBatterySocAtHour(hour: number): number {
   if (hour < 6) {
-    return Math.round((55 - (hour / 6) * 22) * 10) / 10; // 55% down to 33%
+    return Math.round((55 - (hour / 6) * 22) * 10) / 10;
   } else if (hour < 9) {
-    return Math.round((33 + ((hour - 6) / 3) * 10) * 10) / 10; // 33% up to 43%
+    return Math.round((33 + ((hour - 6) / 3) * 10) * 10) / 10;
   } else if (hour < 14.5) {
-    return Math.round((43 + ((hour - 9) / 5.5) * 49) * 10) / 10; // 43% up to 92%
+    return Math.round((43 + ((hour - 9) / 5.5) * 49) * 10) / 10;
   } else if (hour < 17.5) {
-    return Math.round((92 + ((hour - 14.5) / 3) * 3) * 10) / 10; // 92% float to 95%
+    return Math.round((92 + ((hour - 14.5) / 3) * 3) * 10) / 10;
   } else {
-    return Math.round((95 - ((hour - 17.5) / 6.5) * 40) * 10) / 10; // 95% discharge down to 55%
+    return Math.round((95 - ((hour - 17.5) / 6.5) * 40) * 10) / 10;
   }
 }
 
@@ -263,11 +451,12 @@ export function getPast24HoursBattery(currentHour: number): BatteryHistoricalPoi
 }
 
 /**
- * Complete System Overview Telemetry
+ * Complete System Overview Telemetry with equipment efficiency interactions
  */
 export function getOverviewTelemetry(t: number): OverviewTelemetry {
-  const genKw = getActualSolarKw(t);
+  const eq = calculateEquipmentGeneration(t);
   const { totalLoadKw, activeLoads } = getAllocationsForTime(t, 'adjusted');
+  const genKw = eq.totalActualAcKw;
   const netKw = Math.round((genKw - totalLoadKw) * 10) / 10;
 
   const soc = getBatterySocAtHour(t);
@@ -275,8 +464,8 @@ export function getOverviewTelemetry(t: number): OverviewTelemetry {
   const usableKwh = Math.max(0, Math.round((storedKwh - RESERVE_FLOOR_KWH) * 10) / 10);
 
   let flowState: 'CHARGING' | 'DISCHARGING' | 'IDLE' = 'IDLE';
-  if (netKw > 1.0) flowState = 'CHARGING';
-  else if (netKw < -1.0) flowState = 'DISCHARGING';
+  if (netKw > 0.8) flowState = 'CHARGING';
+  else if (netKw < -0.8) flowState = 'DISCHARGING';
 
   let plainTextProjection = '';
   if (flowState === 'CHARGING') {
@@ -284,12 +473,14 @@ export function getOverviewTelemetry(t: number): OverviewTelemetry {
     if (chargeNeededKwh <= 0) {
       plainTextProjection = 'Batteries are fully charged. Surplus energy safely curtails.';
     } else {
-      const chargeRate = Math.min(netKw, MAX_BATTERY_RATE_KW);
-      const hoursRemaining = chargeRate > 0 ? chargeNeededKwh / chargeRate : 2;
+      // Sunsynk bidirectional converter conversion efficiency (~96.5%)
+      const sunsynkEfficiency = 0.965;
+      const effectiveChargeRate = Math.min(netKw * sunsynkEfficiency, MAX_BATTERY_RATE_KW);
+      const hoursRemaining = effectiveChargeRate > 0 ? chargeNeededKwh / effectiveChargeRate : 2;
       const finishHour = (t + hoursRemaining) % 24;
       const fh = Math.floor(finishHour);
       const fm = Math.round((finishHour - fh) * 60);
-      plainTextProjection = `Batteries will reach full charge by ${String(fh).padStart(2, '0')}:${String(fm).padStart(2, '0')} at current solar generation.`;
+      plainTextProjection = `Batteries will reach full charge by ${String(fh).padStart(2, '0')}:${String(fm).padStart(2, '0')} at current solar output.`;
     }
   } else {
     const nightLoad = Math.max(10, totalLoadKw);
@@ -300,16 +491,14 @@ export function getOverviewTelemetry(t: number): OverviewTelemetry {
     plainTextProjection = `Batteries will comfortably support nighttime residential and teaching loads until ${String(ch).padStart(2, '0')}:${String(cm).padStart(2, '0')} AM.`;
   }
 
-  const irradiance = getIrradiance(t);
   let conditionLabel = 'Low Sun / Overcast';
-  if (irradiance > 600) conditionLabel = 'Strong Sunlight';
-  else if (irradiance >= 200) conditionLabel = 'Moderate Sun';
+  if (eq.irradiance > 600) conditionLabel = 'Strong Sunlight';
+  else if (eq.irradiance >= 200) conditionLabel = 'Moderate Sun';
 
-  const ambientTemp = getAmbientTemp(t);
-  const humidity = Math.round(75 - (irradiance / 920) * 35);
+  const humidity = Math.round(75 - (eq.irradiance / 920) * 35);
 
   return {
-    systemStatus: 'OPTIMAL',
+    systemStatus: eq.inverter2.variancePercent > 30 ? 'WARNING' : 'OPTIMAL',
     totalGenerationKw: genKw,
     totalLoadDemandKw: totalLoadKw,
     netPowerKw: netKw,
@@ -322,11 +511,11 @@ export function getOverviewTelemetry(t: number): OverviewTelemetry {
       plainTextProjection,
     },
     weatherSummary: {
-      irradiance,
-      ambientTemp,
+      irradiance: eq.irradiance,
+      ambientTemp: eq.ambientTemp,
       conditionLabel,
       humidity,
-      windSpeed: 3.4,
+      windSpeed: eq.windSpeed,
       windDirection: 'North-East',
     },
     timestamp: new Date().toISOString(),
@@ -334,7 +523,7 @@ export function getOverviewTelemetry(t: number): OverviewTelemetry {
 }
 
 /**
- * 24-Hour Solar Generation Forecast
+ * 24-Hour Solar Generation Forecast based on integrated equipment efficiency curves
  */
 export function getForecastData(): ForecastResponse {
   const hourlyTimeSeries = [];
@@ -342,7 +531,21 @@ export function getForecastData(): ForecastResponse {
   let totalYieldKwh = 0;
 
   for (let h = 0; h <= 23; h++) {
-    const kw = getActualSolarKw(h);
+    // Forecast uses deterministic baseline without stochastic jitter
+    const ideal = getIdealSolarKw(h);
+    const amb = getAmbientTemp(h);
+    const irr = getIrradiance(h, 1.0);
+    const cellT = getPvCellTemp(amb, irr, 3.2);
+    const tempDerate = Math.max(0.75, 1.0 - TEMP_COEFF_PV * (cellT - 25.0));
+    const dcGross = ideal * tempDerate;
+
+    // Inverter 1 (51.5% @ 98.5% cleanliness) + Inverter 2 (48.5% @ 84.5% cleanliness)
+    const dc1 = dcGross * 0.515 * 0.985;
+    const dc2 = dcGross * 0.485 * 0.845;
+    const ac1 = dc1 * getInverterEfficiency(dc1, 17.0, amb + 10);
+    const ac2 = dc2 * getInverterEfficiency(dc2, 17.0, amb + 15);
+    const kw = Math.round((ac1 + ac2) * 10) / 10;
+
     if (kw > peakKw) peakKw = kw;
     totalYieldKwh += kw;
     hourlyTimeSeries.push({
@@ -380,9 +583,13 @@ export function getAllocationResponse(
 }
 
 /**
- * Battery Storage & Inverter Diagnostics
+ * Battery Storage & Inverter Diagnostics with C-rate heating & impedance balance
  */
 export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse {
+  const eq = calculateEquipmentGeneration(hour);
+  const { totalLoadKw } = getAllocationsForTime(hour, 'adjusted');
+  const netKw = eq.totalActualAcKw - totalLoadKw;
+
   const soc = getBatterySocAtHour(hour);
   const usableKwh = Math.max(0, (TOTAL_STORAGE_KWH * soc) / 100 - RESERVE_FLOOR_KWH);
   const hoursLeft = usableKwh / 14;
@@ -390,12 +597,30 @@ export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse 
   const ch = Math.floor(cutoffH);
   const cm = Math.round((cutoffH - ch) * 60);
 
+  // Compute battery DC current based on net power through Sunsynk converter
+  const sunsynkEff = netKw >= 0 ? 0.965 : 0.958;
+  const dcBatteryPowerKw = netKw >= 0 ? netKw * sunsynkEff : Math.abs(netKw) / sunsynkEff;
+  const totalBatteryCurrentA = Math.min(220, Math.round((dcBatteryPowerKw * 1000) / 51.2 * 10) / 10);
+
+  // Dual tower balance (Tower 1 takes 50.8%, Tower 2 takes 49.2%)
+  const current1 = Math.round(totalBatteryCurrentA * 0.508 * 10) / 10;
+  const current2 = Math.round(totalBatteryCurrentA * 0.492 * 10) / 10;
+
+  // Temperature rises with C-rate resistive heating (I^2 * R)
+  const towerTemp1 = Math.round((25.5 + 0.07 * current1) * 10) / 10;
+  const towerTemp2 = Math.round((25.8 + 0.075 * current2) * 10) / 10;
+
+  // Voltage rises slightly during charging, dips slightly during discharge
+  const vOffset = netKw > 0 ? (totalBatteryCurrentA / 200) * 0.4 : -(totalBatteryCurrentA / 200) * 0.4;
+  const voltage1 = Math.round((51.3 + vOffset) * 10) / 10;
+  const voltage2 = Math.round((51.2 + vOffset) * 10) / 10;
+
   return {
     batteryInverter: {
       model: 'Sunsynk SUN-20K-SG05LP3-EU-SM2',
       operatingMode: 'GRID_FORMING_ISLAND',
-      acOutputKw: 20.0,
-      inverterTempCelsius: 33.8,
+      acOutputKw: Math.round(Math.min(20.0, Math.abs(netKw)) * 10) / 10,
+      inverterTempCelsius: Math.round((31.0 + (dcBatteryPowerKw / 20.0) * 8.5) * 10) / 10,
       status: 'OPTIMAL',
     },
     towers: [
@@ -404,9 +629,9 @@ export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse 
         moduleCount: 10,
         totalCapacityKwh: 51.2,
         currentSocPercent: Math.min(100, Math.round(soc * 10) / 10),
-        voltageV: 51.4,
-        currentA: 42.1,
-        temperatureCelsius: 28.2,
+        voltageV: voltage1,
+        currentA: current1,
+        temperatureCelsius: towerTemp1,
         isBalanced: true,
         bmsStatus: 'OPTIMAL',
       },
@@ -415,9 +640,9 @@ export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse 
         moduleCount: 10,
         totalCapacityKwh: 51.2,
         currentSocPercent: Math.min(100, Math.round((soc - 0.2) * 10) / 10),
-        voltageV: 51.3,
-        currentA: 41.8,
-        temperatureCelsius: 28.5,
+        voltageV: voltage2,
+        currentA: current2,
+        temperatureCelsius: towerTemp2,
         isBalanced: true,
         bmsStatus: 'OPTIMAL',
       },
@@ -431,51 +656,36 @@ export function getBatteryDiagnostics(hour: number): BatteryDiagnosticsResponse 
 }
 
 /**
- * Inverter Diagnostics & 15-30% Leeway Calculations
+ * Inverter Diagnostics & 15-30% Leeway Calculations based on coupled equipment physics
  */
 export function getInverterDiagnostics(t: number): InverterTelemetry[] {
-  const expectedPerInverter = Math.round(getIdealSolarKw(t) * 0.5 * 10) / 10;
-  const totalActual = getActualSolarKw(t);
-
-  // Inverter 1 is performing optimally (~52% share, variance <= 15%)
-  const actual1 = Math.round(totalActual * 0.52 * 10) / 10;
-  const variance1 =
-    expectedPerInverter > 0
-      ? Math.round(((expectedPerInverter - actual1) / expectedPerInverter) * 100)
-      : 0;
-
-  // Inverter 2 has slight dust/heat variance (~44% share, variance ~18% yellow leeway)
-  const actual2 = Math.round(totalActual * 0.44 * 10) / 10;
-  const variance2 =
-    expectedPerInverter > 0
-      ? Math.round(((expectedPerInverter - actual2) / expectedPerInverter) * 100)
-      : 0;
+  const eq = calculateEquipmentGeneration(t);
 
   return [
     {
       id: 'solis_inverter_1',
       name: 'Inverter 1 (Solis 17kW)',
-      status: variance1 <= 15 ? 'OPTIMAL' : 'WARNING',
-      acPowerKw: actual1,
-      expectedPowerKw: expectedPerInverter,
-      variancePercent: Math.max(0, variance1),
+      status: eq.inverter1.variancePercent <= 15 ? 'OPTIMAL' : 'WARNING',
+      acPowerKw: eq.inverter1.acPowerKw,
+      expectedPowerKw: eq.inverter1.expectedPowerKw,
+      variancePercent: eq.inverter1.variancePercent,
       acVoltageV: 400.2,
       frequencyHz: 50.02,
-      dcInputKw: Math.round(actual1 * 1.02 * 10) / 10,
-      temperatureCelsius: 34.5,
+      dcInputKw: eq.inverter1.dcInputKw,
+      temperatureCelsius: eq.inverter1.heatsinkTemp,
       faultCode: null,
     },
     {
       id: 'solis_inverter_2',
       name: 'Inverter 2 (Solis 17kW)',
-      status: variance2 <= 15 ? 'OPTIMAL' : variance2 <= 30 ? 'WARNING' : 'FAULT',
-      acPowerKw: actual2,
-      expectedPowerKw: expectedPerInverter,
-      variancePercent: Math.max(0, variance2),
+      status: eq.inverter2.variancePercent <= 15 ? 'OPTIMAL' : eq.inverter2.variancePercent <= 30 ? 'WARNING' : 'FAULT',
+      acPowerKw: eq.inverter2.acPowerKw,
+      expectedPowerKw: eq.inverter2.expectedPowerKw,
+      variancePercent: eq.inverter2.variancePercent,
       acVoltageV: 398.8,
       frequencyHz: 49.98,
-      dcInputKw: Math.round(actual2 * 1.02 * 10) / 10,
-      temperatureCelsius: 38.1,
+      dcInputKw: eq.inverter2.dcInputKw,
+      temperatureCelsius: eq.inverter2.heatsinkTemp,
       faultCode: null,
     },
   ];

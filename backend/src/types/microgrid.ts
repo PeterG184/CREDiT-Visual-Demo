@@ -136,3 +136,4 @@ export interface MaintenanceReportResponse {
   createdAt: string;
   storedFile?: string;
 }
+
