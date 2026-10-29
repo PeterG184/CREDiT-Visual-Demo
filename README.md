@@ -35,33 +35,52 @@ The **CREDiT Digital Twin Platform** bridges physical microgrid infrastructure w
 
 The digital twin models a physical microgrid installation with the following hardware specifications:
 
+```
+                       [ 50.3 kWp PV Array ]
+                 (86 x 585W Panels / Multi-String)
+                                |
+               +----------------+----------------+
+               |                                 |
+     [ Solis Inverter 1 ]              [ Solis Inverter 2 ]
+    (17 kWac / Clean Strings)        (17 kWac / Dust Variance)
+               |                                 |
+               +----------------+----------------+
+                                | (AC Bus)
+                                |
+                [ Sunsynk SUN-20K-SG05LP3-EU-SM2 ]
+                    (20 kWac Battery Inverter)
+                                |
+            +-------------------+-------------------+
+            | (48V DC Bus)                          |
+   [ Tower 1: 10 x Dyness DL5.0C ]     [ Tower 2: 10 x Dyness DL5.0C ]
+      (51.2 kWh / 51.2V Stack)            (51.2 kWh / 51.2V Stack)
+            \                                       /
+             +------------------+------------------+
+                                |
+                   Total Storage: 102.4 kWh
+```
+
 ```mermaid
-graph TD
-    PV["50.3 kWp PV Array<br/>(86 x 585W Monocrystalline Panels)"]
-    
-    INV1["Solis Inverter 1 (S5-GR3P17K)<br/>17 kWac Rated / Clean Strings"]
-    INV2["Solis Inverter 2 (S5-GR3P17K)<br/>17 kWac Rated / Dust & Thermal Variance"]
-    
-    ACBUS["3-Phase 400V AC Microgrid Bus (50 Hz)"]
-    
-    SUNSYNK["Sunsynk 20kW Hybrid Inverter<br/>(SUN-20K-SG05LP3-EU-SM2)"]
-    
-    DCBUS["48V DC Battery Bus"]
-    
-    TOWER1["Dyness Tower 1 (51.2 kWh)<br/>10 x DL5.0C Pro Modules"]
-    TOWER2["Dyness Tower 2 (51.2 kWh)<br/>10 x DL5.0C Pro Modules"]
-    
-    LOADS["Campus Loads & Productive Machinery<br/>Water Pumping | Workshop | Bakery | Mill | Residential"]
+flowchart TD
+    PV["50.3 kWp PV Array (86 x 585W Panels)"]
+    INV1["Solis Inverter 1 (17 kWac Clean Strings)"]
+    INV2["Solis Inverter 2 (17 kWac Soiled Strings)"]
+    AC_BUS["3-Phase 400V AC Microgrid Bus (50 Hz)"]
+    SUNSYNK["Sunsynk 20kW Hybrid Inverter"]
+    DC_BUS["48V DC Battery Bus"]
+    TOWER1["Dyness Tower 1 (51.2 kWh Stack)"]
+    TOWER2["Dyness Tower 2 (51.2 kWh Stack)"]
+    LOADS["Campus Productive Loads and Machinery"]
 
     PV -->|DC Strings 1-4| INV1
     PV -->|DC Strings 5-8| INV2
-    INV1 -->|AC Power| ACBUS
-    INV2 -->|AC Power| ACBUS
-    ACBUS <-->|Bidirectional AC/DC| SUNSYNK
-    SUNSYNK <-->|Charge / Discharge| DCBUS
-    DCBUS <--> TOWER1
-    DCBUS <--> TOWER2
-    ACBUS --> LOADS
+    INV1 -->|AC Power| AC_BUS
+    INV2 -->|AC Power| AC_BUS
+    AC_BUS -->|Power Supply| LOADS
+    AC_BUS ---|Bidirectional AC/DC| SUNSYNK
+    SUNSYNK ---|Charge and Discharge| DC_BUS
+    DC_BUS --- TOWER1
+    DC_BUS --- TOWER2
 ```
 
 ### Hardware Equipment Breakdown
@@ -80,22 +99,40 @@ graph TD
 
 The platform is architected as a lightweight monorepo with strict decoupling between UI visualization and backend physics simulation:
 
+```
++-------------------------------------------------------------------------+
+|                        CLIENT TIER (Port 8081)                          |
+|   React Native for Web & Mobile (Expo Router, TypeScript)               |
+|   - SimulationContext (Live Polling & 24h Time Scrubber)                |
+|   - Client Simulation Engine (100% Offline Parity Fallback)             |
++-------------------------------------------------------------------------+
+                                     |
+                                HTTP / JSON
+                                     |
++-------------------------------------------------------------------------+
+|                        SERVER TIER (Port 5678)                          |
+|   Node.js / Express REST API (/api/v1/*)                                |
+|   - Coupled Microgrid Physics Engine (NOCT, Solis Curves, ESS Dynamics) |
+|   - In-Memory Telemetry & Incident Reports Store                        |
++-------------------------------------------------------------------------+
+```
+
 ```mermaid
 flowchart LR
-    subgraph Client["Frontend Client (Port 8081)"]
-        UI["React Native for Web & Mobile<br/>(Expo Router, TypeScript)"]
-        CTX["SimulationContext<br/>(Live Polling & Time Scrubber)"]
-        FALLBACK["Client Simulation Engine<br/>(100% Offline Parity Fallback)"]
+    subgraph Client ["Frontend Client (Port 8081)"]
+        UI["React Native Web and Mobile (Expo Router)"]
+        CTX["SimulationContext (State and Scrubber)"]
+        FALLBACK["Client Simulator Engine (Offline Parity)"]
     end
 
-    subgraph Server["Backend Server (Port 5678)"]
-        API["Express REST API (/api/v1/*)<br/>(CORS, JSON, Multer Uploads)"]
-        PHYSICS["Microgrid Physics Engine<br/>(NOCT, Solis Curves, ESS Dynamics)"]
-        STORE["In-Memory State & Reports<br/>(Extensible to PostgreSQL)"]
+    subgraph Server ["Backend Server (Port 5678)"]
+        API["Express REST API (Endpoints)"]
+        PHYSICS["Microgrid Physics Engine (NOCT and Curves)"]
+        STORE["In-Memory State and Reports Store"]
     end
 
     UI --> CTX
-    CTX -->|HTTP / JSON| API
+    CTX -->|HTTP Requests| API
     CTX -.->|Offline Fallback| FALLBACK
     API --> PHYSICS
     API --> STORE
