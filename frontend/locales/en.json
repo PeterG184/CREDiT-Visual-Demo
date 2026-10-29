@@ -1,7 +1,12 @@
 {
   "common": {
     "appName": "CREDiT Digital Twin",
+    "now": "NOW",
+    "today": "TODAY",
+    "cancel": "Cancel",
+    "submitting": "Submitting...",
     "status": {
+      "statusLabel": "Status",
       "optimal": "Optimal",
       "normal": "Normal",
       "warning": "Attention Required",
@@ -12,7 +17,14 @@
       "active": "Active",
       "scheduled": "Scheduled",
       "completed": "Completed",
-      "continuous": "Continuously Active"
+      "continuous": "Continuously Active",
+      "operational": "Operational",
+      "synchronized": "Synchronized"
+    },
+    "urgency": {
+      "high": "HIGH",
+      "medium": "MEDIUM",
+      "low": "LOW"
     },
     "units": {
       "kw": "kW",
@@ -22,7 +34,11 @@
       "celsius": "°C",
       "wm2": "W/m²",
       "percent": "%",
-      "ms": "m/s"
+      "ms": "m/s",
+      "hpa": "hPa",
+      "hrs": "hrs",
+      "hr": "hr",
+      "min": "min"
     },
     "demo": {
       "title": "Simulation Time Controls",
@@ -31,7 +47,25 @@
       "midday": "12:30 Solar Peak",
       "evening": "16:30 Tapering",
       "night": "21:30 Night Mode",
-      "simulated": "Simulated Time"
+      "simulated": "Simulated Time",
+      "realClock": "Real Clock",
+      "liveClock": "Live",
+      "sim": "Sim:",
+      "current": "Current",
+      "adjustTime": "Adjust Time:",
+      "sub1Hr": "-1 hr",
+      "sub30Min": "-30 min",
+      "add30Min": "+30 min",
+      "add1Hr": "+1 hr"
+    },
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
     }
   },
   "nav": {
@@ -43,18 +77,24 @@
   },
   "dashboard": {
     "title": "Microgrid Overview",
+    "subtitle": "Real-time physical telemetry and automated community power distribution",
     "systemHealth": "System Status",
     "powerBalance": {
       "title": "Power Balance (Now)",
       "generating": "Generating",
       "using": "Using",
       "net": "Net Flow",
-      "currentlyPowering": "Currently Powering"
+      "currentlyPowering": "Currently Powering",
+      "storing": "Storing to Battery",
+      "drawing": "Drawing from Battery",
+      "noLoads": "No high-demand operations currently active."
     },
     "battery": {
       "title": "Battery Storage",
       "capacity": "Total Capacity",
-      "status": "Battery Status"
+      "status": "Battery Status",
+      "usableEnergy": "Usable Energy",
+      "aboveReserve": "(Above 10% Reserve)"
     },
     "weather": {
       "title": "Weather Conditions",
@@ -71,11 +111,46 @@
   },
   "forecast": {
     "title": "24-Hour Generation Forecast",
+    "stationPill": "Atmospheric & Solar Station",
+    "subtitle": "Real-time weather telemetry, 24-hour single-variable parameter curves, hourly progression, and 7-day solar generation outlook",
     "peakProduction": "Expected Peak Production",
     "estimatedDailyYield": "Estimated Total Daily Yield",
+    "estimatedNoon": "Estimated at 12:30 solar noon",
+    "projectedDailyEnergy": "Projected daily clean energy",
+    "daylightWindow": "Daylight Production Window",
+    "daylightHours": "06:12 AM to 06:24 PM",
+    "peakThermalDerating": "Peak Thermal Derating",
+    "noctHeating": "NOCT module cell heating (55°C)",
     "chartTitle": "Hourly Solar Generation Curve (Single-Metric)",
     "chartYAxis": "Generation (kW)",
     "chartXAxis": "Time of Day",
+    "metrics": {
+      "generation": {
+        "label": "Solar Output",
+        "yUnit": "(kW)",
+        "subtitle": "Single-variable AC power generation profile across 24 hours"
+      },
+      "irradiance": {
+        "label": "Irradiance",
+        "yUnit": "(W/m²)",
+        "subtitle": "Global Horizontal Solar Irradiance (GHI) curve from site pyranometer"
+      },
+      "temperature": {
+        "label": "Temperature",
+        "yUnit": "(°C)",
+        "subtitle": "Ambient air temperature profile influencing PV module cell derating"
+      },
+      "cloud": {
+        "label": "Cloud Cover",
+        "yUnit": "(%)",
+        "subtitle": "Atmospheric cloud optical density percentage over the microgrid array"
+      },
+      "wind": {
+        "label": "Wind Speed",
+        "yUnit": "(m/s)",
+        "subtitle": "Anemometer wind velocity providing natural convective cooling"
+      }
+    },
     "summaryTitle": "Forecast Summary",
     "periods": {
       "morning": "Morning (06:00 - 11:00): Clear skies, strong production",
@@ -84,12 +159,58 @@
       "night": "Night: Generation resumes at 06:15 tomorrow"
     }
   },
+  "weatherOverview": {
+    "stationBadge": "Site Weather Station",
+    "heroTitle": "Current Atmospheric & Solar Telemetry",
+    "liveSensors": "Live Sensors",
+    "feelsLike": "Feels like",
+    "high": "High",
+    "low": "Low",
+    "solarIrradiance": "Solar Irradiance",
+    "ghiSensor": "Direct GHI sensor",
+    "uvIndex": "UV Index",
+    "solarNoonPeak": "Solar noon peak",
+    "relativeHumidity": "Relative Humidity",
+    "dewPoint": "Dew Point",
+    "windGusts": "Wind & Gusts",
+    "gustsTo": "Gusts to",
+    "barometer": "Barometer",
+    "stableHighPressure": "Stable high pressure",
+    "cloudCover": "Cloud Cover",
+    "cumulusScattering": "Low cumulus scattering",
+    "sunrise": "Sunrise",
+    "solarNoon": "Solar Noon (Zenith)",
+    "sunset": "Sunset",
+    "daylightWindow": "Daylight Window"
+  },
+  "hourlyStrip": {
+    "title": "24-Hour Chronological Weather Forecast",
+    "subtitle": "Hourly progression of solar irradiance, temperature, cloud cover, and precipitation",
+    "badge": "Hourly Strip"
+  },
+  "sevenDay": {
+    "title": "7-Day Microgrid Weather & Solar Outlook",
+    "subtitle": "Synoptic forecast and estimated daily energy generation potential for forward planning",
+    "badge": "Weekly Plan",
+    "ratings": {
+      "excellent": "EXCELLENT",
+      "good": "GOOD",
+      "moderate": "MODERATE",
+      "poor": "POOR"
+    }
+  },
   "allocation": {
     "title": "Energy Allocation Schedule",
     "standardPlan": "Standard Plan",
     "liveSchedule": "Today's Live Schedule",
     "adjustedNotice": "Live Status: Adjusted for atmospheric and battery conditions",
     "timelineTitle": "24-Hour Timeline & Scheduled Operations",
+    "standardSubtitle": "Static baseline reference schedule (235 kWh/day)",
+    "adjustedSubtitle": "Weather-optimized load schedule for peak solar utilization",
+    "activityDetails": "Schedule Activity Details",
+    "cont": "CONT",
+    "activeNow": "Active Now",
+    "baseline": "Baseline",
     "table": {
       "priority": "Priority",
       "activity": "Activity",
@@ -108,11 +229,34 @@
   },
   "battery": {
     "title": "Battery Storage System",
+    "subtitle": "102.4 kWh Dyness DL5.0C Pro Energy Storage System & Sunsynk 20kW Battery Inverter",
+    "currentStorage": "Current Storage",
     "totalCapacity": "Total Capacity",
     "currentStored": "Current Stored",
+    "usable": "Usable",
+    "aboveCutoff": "above 10% reserve",
     "netPowerFlow": "Net Power Flow",
+    "chargingPv": "Charging from PV arrays",
+    "dischargingLoad": "Discharging to community load",
     "runtimeProjectionTitle": "Battery Runtime Projection",
     "historyTitle": "Past 24 Hours Battery Life (State of Charge %)",
+    "historySubtitle": "Continuous state of charge telemetry over the past 24 hours",
+    "legendSoc": "Dyness SoC (%)",
+    "legendReserve": "10% Reserve Floor",
+    "dodCutoff": "10% DoD Cutoff",
+    "fullCharge": "Full Charge: ",
+    "depletion": "Depletion: ",
+    "soc": "State of Charge",
+    "reserveFootnote": "10% Depth-of-Discharge cutoff protected by Dyness BMS",
+    "tower": "Tower",
+    "inverterTitle": "Battery Inverter",
+    "operatingMode": "Operating Mode",
+    "acOutputPower": "AC Output Power",
+    "inverterTemp": "Inverter Temp",
+    "acDcCoupling": "AC/DC Coupling",
+    "synchronized": "Synchronized",
+    "dcVoltage": "DC Voltage",
+    "currentFlow": "Current Flow",
     "towers": {
       "tower1": "Tower 1 Status",
       "tower2": "Tower 2 Status",
@@ -128,31 +272,69 @@
   },
   "maintenance": {
     "title": "Site Overview & Equipment Diagnostics",
+    "subtitle": "Real-time hardware performance metrics, inverter diagnostic bar charts, and incident ticketing",
+    "reportButton": "Report Fault / Incident",
+    "logReport": "Log Report",
+    "topologyTitle": "Physical Microgrid Topology & Equipment Status",
     "inverterChartTitle": "Inverter Performance: Expected vs. Actual (kW)",
+    "inverterChartSubtitle": "Comparing real-time generation against physics-based irradiance expectation",
     "varianceChartTitle": "Inverter Leeway Variance (%)",
+    "expectedLegend": "Expected (kW)",
+    "actualLegend": "Actual (kW)",
+    "optimalLeeway": "Optimal Leeway",
+    "minorVariance": "Minor Variance",
+    "tripFault": "Trip Fault",
+    "balanced": "Balanced",
+    "ruleTitle": "Diagnostic Leeway Rule Reference:",
+    "ruleNormal": "0 – 15%: Normal atmospheric scatter (Optimal)",
+    "ruleAttention": "15 – 30%: Soiling / dust variance (Attention)",
+    "ruleFault": "> 30%: Hardware alarm / string trip (Fault)",
+    "telemetry": "Telemetry",
+    "yield": "Yield",
     "equipment": {
       "pv": "PV Array (86 Panels / 50.3 kWp)",
+      "pvShort": "PV Array",
+      "pvSpec": "86 Panels / 50.3 kWp",
       "weather": "Weather Station",
+      "weatherShort": "Weather Station",
       "solis1": "Inverter 1 (Solis 17kW)",
       "solis2": "Inverter 2 (Solis 17kW)",
       "sunsynk": "Battery Inverter (Sunsynk 20kW)",
-      "towers": "Dyness ESS Towers 1 & 2"
+      "sunsynkShort": "Battery Inverter",
+      "towers": "Dyness ESS Towers 1 & 2",
+      "towersShort": "Dyness ESS Towers",
+      "towersSpec": "102.4 kWh / 20 Modules"
     },
     "form": {
       "title": "Submit Maintenance Report / Fault",
+      "titleBar": "Log Maintenance Incident",
       "techName": "Technician Name",
       "techPlaceholder": "Enter technician full name",
+      "errorName": "Please enter technician name.",
       "incidentDate": "Fault Incident Date & Time",
       "equipmentSelect": "Equipment Involved (Select all that apply)",
       "otherEquipment": "Other Equipment Notes",
+      "otherEqPlaceholder": "e.g. Inverter 2 heat sink dirty, cable conduit loose",
       "faultSelect": "Specific Observed Fault",
+      "filteredNotice": "(Filtered by Selected Equipment)",
       "otherFault": "Other Fault Notes",
+      "otherFaultPlaceholder": "e.g. Inverter cooling fan humming, temperature sensor reading erratic",
       "photoUpload": "Component Photo Upload (Mocked)",
       "photoButton": "Select Image File (Max 5MB)",
+      "selected": "Selected",
+      "noFile": "No file chosen (Mock feature)",
       "urgency": "System Urgency Level (Auto-Computed)",
       "submitButton": "Submit Diagnostic Report",
-      "successMessage": "Incident report logged successfully. Maintenance ticket created."
+      "reportSuccess": "Report Logged Successfully",
+      "closeDone": "Done / Close Window",
+      "logAnother": "Log Another Report",
+      "successMessage": "Incident report logged successfully. Maintenance ticket created.",
+      "eqSolis": "Solis Inverters (1 & 2)",
+      "eqPv": "PV Panels Array (50.3 kWp)",
+      "eqDyness": "Dyness Battery Towers",
+      "eqSunsynk": "Sunsynk Battery Inverter",
+      "eqWeather": "Weather Station",
+      "eqWiring": "Balance of System / Wiring"
     }
   }
 }
-
