@@ -49,11 +49,33 @@ export const ApiService = {
     );
   },
 
-  async getForecast(): Promise<{ data: ForecastResponse; isLiveBackend: boolean }> {
-    return fetchWithFallback(
-      `${API_BASE_URL}/microgrid/forecast/24h`,
-      () => simulator.getForecastData()
+  async getForecast(simulatedHour?: number): Promise<{ data: ForecastResponse; isLiveBackend: boolean }> {
+    const effectiveHour =
+      simulatedHour !== undefined
+        ? simulatedHour
+        : new Date().getHours() + new Date().getMinutes() / 60;
+
+    const fallback = simulator.getForecastData(effectiveHour);
+    const res = await fetchWithFallback(
+      `${API_BASE_URL}/microgrid/forecast/24h?hour=${effectiveHour}`,
+      () => fallback
     );
+
+    // If backend doesn't have extended weather forecast fields yet, augment with client simulator data
+    if (!res.data.weatherOverview || !res.data.hourlyWeather) {
+      return {
+        data: {
+          ...fallback,
+          ...res.data,
+          weatherOverview: fallback.weatherOverview,
+          hourlyWeather: fallback.hourlyWeather,
+          sevenDayOutlook: fallback.sevenDayOutlook,
+        },
+        isLiveBackend: res.isLiveBackend,
+      };
+    }
+
+    return res;
   },
 
   async getAllocations(

@@ -80,12 +80,79 @@ export interface ForecastDataPoint {
   generationKw: number;
 }
 
+export interface HourlyWeatherForecast {
+  hour: string;
+  decimalHour: number;
+  generationKw: number;
+  irradianceWm2: number;
+  tempCelsius: number;
+  feelsLikeCelsius: number;
+  cloudCoverPercent: number;
+  humidityPercent: number;
+  windSpeedMs: number;
+  windDirectionCardinal: string;
+  rainProbabilityPercent: number;
+  uvIndex: number;
+  conditionLabel: string;
+  conditionIcon: 'sun' | 'cloud' | 'cloud-rain' | 'cloud-snow' | 'wind' | 'cloud-drizzle' | 'moon';
+}
+
+export interface DailyWeatherForecast {
+  date: string;
+  dayName: string;
+  dayShort: string;
+  conditionLabel: string;
+  conditionIcon: 'sun' | 'cloud' | 'cloud-rain' | 'cloud-snow' | 'wind' | 'cloud-drizzle';
+  highTempCelsius: number;
+  lowTempCelsius: number;
+  expectedSolarYieldKwh: number;
+  yieldRating: 'EXCELLENT' | 'GOOD' | 'MODERATE' | 'POOR';
+  rainProbabilityPercent: number;
+  cloudCoverPercent: number;
+  uvIndexMax: number;
+  windSpeedMaxMs: number;
+  operationalSuitability: string;
+}
+
+export interface ComprehensiveWeatherOverview {
+  currentTemp: number;
+  feelsLikeTemp: number;
+  tempHigh: number;
+  tempLow: number;
+  irradianceWm2: number;
+  conditionLabel: string;
+  conditionDescription: string;
+  conditionIcon: 'sun' | 'cloud' | 'cloud-rain' | 'wind';
+  humidityPercent: number;
+  barometricPressureHpa: number;
+  uvIndex: number;
+  uvLevel: string;
+  windSpeedMs: number;
+  windGustMs: number;
+  windDirectionCardinal: string;
+  windDirectionDegrees: number;
+  visibilityKm: number;
+  dewPointCelsius: number;
+  cloudCoverPercent: number;
+  sunriseTime: string;
+  sunsetTime: string;
+  daylightDuration: string;
+  solarZenithTime: string;
+  precipitationRiskPercent: number;
+  rainfallAmountMm: number;
+  dustRiskIndex: 'LOW' | 'MODERATE' | 'HIGH';
+  heatDeratingImpactPercent: number;
+}
+
 export interface ForecastResponse {
   date: string;
   projectedTotalYieldKwh: number;
   peakKw: number;
   hourlyTimeSeries: ForecastDataPoint[];
   operationalAdvice: string;
+  weatherOverview?: ComprehensiveWeatherOverview;
+  hourlyWeather?: HourlyWeatherForecast[];
+  sevenDayOutlook?: DailyWeatherForecast[];
 }
 
 export interface AllocationResponse {

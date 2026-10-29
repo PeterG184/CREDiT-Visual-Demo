@@ -6,6 +6,9 @@ import {
   LoadAllocationItem,
   InverterTelemetry,
   BatteryHistoricalPoint,
+  HourlyWeatherForecast,
+  DailyWeatherForecast,
+  ComprehensiveWeatherOverview,
 } from '../types/microgrid';
 
 // Hardware Specifications from design_spec.txt
@@ -465,8 +468,9 @@ export function getOverviewTelemetry(t: number): OverviewTelemetry {
   };
 }
 
-export function getForecastData(): ForecastResponse {
+export function getForecastData(simulatedHour: number = 12.0): ForecastResponse {
   const hourlyTimeSeries = [];
+  const hourlyWeather: HourlyWeatherForecast[] = [];
   let peakKw = 0;
   let totalYieldKwh = 0;
 
@@ -486,18 +490,250 @@ export function getForecastData(): ForecastResponse {
 
     if (kw > peakKw) peakKw = kw;
     totalYieldKwh += kw;
+
+    const timeLabel = `${String(h).padStart(2, '0')}:00`;
     hourlyTimeSeries.push({
-      hour: `${String(h).padStart(2, '0')}:00`,
+      hour: timeLabel,
       generationKw: kw,
+    });
+
+    // Cloud cover profile: lowest during peak midday sun
+    let cloudCover = 15;
+    if (h < 6 || h > 18) cloudCover = 25;
+    else if (h >= 11 && h <= 15) cloudCover = 10;
+    else cloudCover = 20;
+
+    // Relative humidity inversely related to temperature
+    const humidity = Math.round(75 - (irr / 920) * 35);
+
+    // Wind speed: light at night, building up to thermal afternoon breezes
+    const windSpeed =
+      Math.round((2.0 + (h >= 9 && h <= 17 ? Math.sin(((h - 9) / 8) * Math.PI) * 2.2 : 0)) * 10) / 10;
+
+    // UV Index curve
+    const uvIndex = Math.round((irr / 920) * 10 * 10) / 10;
+
+    // Condition icon & text
+    let conditionLabel = 'Clear Night';
+    let conditionIcon: 'sun' | 'cloud' | 'cloud-rain' | 'cloud-snow' | 'wind' | 'cloud-drizzle' | 'moon' = 'moon';
+    if (h >= 6 && h <= 18) {
+      if (cloudCover <= 15) {
+        conditionLabel = 'Clear & Sunny';
+        conditionIcon = 'sun';
+      } else if (cloudCover <= 30) {
+        conditionLabel = 'Scattered Clouds';
+        conditionIcon = 'cloud';
+      } else {
+        conditionLabel = 'Partly Cloudy';
+        conditionIcon = 'cloud';
+      }
+    }
+
+    hourlyWeather.push({
+      hour: timeLabel,
+      decimalHour: h,
+      generationKw: kw,
+      irradianceWm2: irr,
+      tempCelsius: amb,
+      feelsLikeCelsius: Math.round((amb + (humidity > 50 ? 1.5 : -0.5)) * 10) / 10,
+      cloudCoverPercent: cloudCover,
+      humidityPercent: humidity,
+      windSpeedMs: windSpeed,
+      windDirectionCardinal: 'NE',
+      rainProbabilityPercent: h >= 15 && h <= 18 ? 10 : 0,
+      uvIndex,
+      conditionLabel,
+      conditionIcon,
     });
   }
 
+  const todayStr = '2026-10-29';
+
+  const sevenDayOutlook: DailyWeatherForecast[] = [
+    {
+      date: '2026-10-29',
+      dayName: 'Thursday',
+      dayShort: 'Today',
+      conditionLabel: 'Clear & Sunny',
+      conditionIcon: 'sun',
+      highTempCelsius: 34.2,
+      lowTempCelsius: 21.5,
+      expectedSolarYieldKwh: 285.0,
+      yieldRating: 'EXCELLENT',
+      rainProbabilityPercent: 5,
+      cloudCoverPercent: 12,
+      uvIndexMax: 10,
+      windSpeedMaxMs: 4.4,
+      operationalSuitability: 'Peak Solar Day: Ideal for Hammer Mill & Commercial Bakery',
+    },
+    {
+      date: '2026-10-30',
+      dayName: 'Friday',
+      dayShort: 'Fri',
+      conditionLabel: 'Mostly Sunny',
+      conditionIcon: 'sun',
+      highTempCelsius: 33.5,
+      lowTempCelsius: 22.0,
+      expectedSolarYieldKwh: 274.0,
+      yieldRating: 'EXCELLENT',
+      rainProbabilityPercent: 10,
+      cloudCoverPercent: 18,
+      uvIndexMax: 9.5,
+      windSpeedMaxMs: 4.1,
+      operationalSuitability: 'High continuous yield: Optimal for all daytime community loads',
+    },
+    {
+      date: '2026-10-31',
+      dayName: 'Saturday',
+      dayShort: 'Sat',
+      conditionLabel: 'Scattered Clouds',
+      conditionIcon: 'cloud',
+      highTempCelsius: 31.8,
+      lowTempCelsius: 20.8,
+      expectedSolarYieldKwh: 242.0,
+      yieldRating: 'GOOD',
+      rainProbabilityPercent: 20,
+      cloudCoverPercent: 32,
+      uvIndexMax: 8.5,
+      windSpeedMaxMs: 3.8,
+      operationalSuitability: 'Stable generation with brief 14:00 cloud dips; run loads early',
+    },
+    {
+      date: '2026-11-01',
+      dayName: 'Sunday',
+      dayShort: 'Sun',
+      conditionLabel: 'Passing Afternoon Showers',
+      conditionIcon: 'cloud-rain',
+      highTempCelsius: 28.4,
+      lowTempCelsius: 19.5,
+      expectedSolarYieldKwh: 198.0,
+      yieldRating: 'MODERATE',
+      rainProbabilityPercent: 45,
+      cloudCoverPercent: 58,
+      uvIndexMax: 6.5,
+      windSpeedMaxMs: 5.2,
+      operationalSuitability: 'Natural panel washing expected; prioritize residential & pumping',
+    },
+    {
+      date: '2026-11-02',
+      dayName: 'Monday',
+      dayShort: 'Mon',
+      conditionLabel: 'Clear Post-Rain Skies',
+      conditionIcon: 'sun',
+      highTempCelsius: 30.5,
+      lowTempCelsius: 20.0,
+      expectedSolarYieldKwh: 282.0,
+      yieldRating: 'EXCELLENT',
+      rainProbabilityPercent: 10,
+      cloudCoverPercent: 15,
+      uvIndexMax: 9.0,
+      windSpeedMaxMs: 3.6,
+      operationalSuitability: 'Clean washed panels deliver high optical yield; ideal for all machines',
+    },
+    {
+      date: '2026-11-03',
+      dayName: 'Tuesday',
+      dayShort: 'Tue',
+      conditionLabel: 'Warm & Dry Sunlight',
+      conditionIcon: 'sun',
+      highTempCelsius: 33.0,
+      lowTempCelsius: 21.2,
+      expectedSolarYieldKwh: 278.0,
+      yieldRating: 'EXCELLENT',
+      rainProbabilityPercent: 5,
+      cloudCoverPercent: 14,
+      uvIndexMax: 9.8,
+      windSpeedMaxMs: 4.0,
+      operationalSuitability: 'Full daytime capacity available for scheduled microgrid activities',
+    },
+    {
+      date: '2026-11-04',
+      dayName: 'Wednesday',
+      dayShort: 'Wed',
+      conditionLabel: 'Sunny with Light Breeze',
+      conditionIcon: 'sun',
+      highTempCelsius: 33.8,
+      lowTempCelsius: 21.8,
+      expectedSolarYieldKwh: 280.0,
+      yieldRating: 'EXCELLENT',
+      rainProbabilityPercent: 5,
+      cloudCoverPercent: 16,
+      uvIndexMax: 10.0,
+      windSpeedMaxMs: 4.2,
+      operationalSuitability: 'High solar availability; full workshop and bakery capacity',
+    },
+  ];
+
+  const nowAmb = getAmbientTemp(simulatedHour);
+  const nowIrr = getIrradiance(simulatedHour, 1.0);
+  const nowCellT = getPvCellTemp(nowAmb, nowIrr, 3.4);
+  const heatDeratingPct = Math.max(0, Math.round(TEMP_COEFF_PV * (nowCellT - 25.0) * 100 * 10) / 10);
+  const nowHum = Math.round(75 - (nowIrr / 920) * 35);
+  const nowUv = Math.round((nowIrr / 920) * 10 * 10) / 10;
+  const nowFeels = Math.round((nowAmb + (nowHum > 50 ? 1.5 : -0.5)) * 10) / 10;
+  let uvLvl = 'Low';
+  if (nowUv >= 8) uvLvl = 'Very High';
+  else if (nowUv >= 6) uvLvl = 'High';
+  else if (nowUv >= 3) uvLvl = 'Moderate';
+
+  let condLabel = 'Clear Night';
+  let condIcon: 'sun' | 'cloud' | 'cloud-rain' | 'wind' = 'sun';
+  let condDesc = 'Stable nocturnal atmospheric conditions with clear skies.';
+  if (simulatedHour >= 6 && simulatedHour <= 18) {
+    if (nowIrr > 600) {
+      condLabel = 'Sunny & Clear Skies';
+      condIcon = 'sun';
+      condDesc = 'Direct solar radiation under high atmospheric clarity with light thermal updrafts.';
+    } else if (nowIrr >= 200) {
+      condLabel = 'Scattered Sunlight';
+      condIcon = 'sun';
+      condDesc = 'Moderate solar irradiance with scattered thin clouds and steady generation.';
+    } else {
+      condLabel = 'Overcast / Soft Sun';
+      condIcon = 'cloud';
+      condDesc = 'Diffuse solar radiation filtered through cloud layers.';
+    }
+  }
+
+  const weatherOverview: ComprehensiveWeatherOverview = {
+    currentTemp: nowAmb,
+    feelsLikeTemp: nowFeels,
+    tempHigh: 34.2,
+    tempLow: 21.5,
+    irradianceWm2: nowIrr,
+    conditionLabel: condLabel,
+    conditionDescription: condDesc,
+    conditionIcon: condIcon,
+    humidityPercent: nowHum,
+    barometricPressureHpa: 1014.2,
+    uvIndex: nowUv,
+    uvLevel: uvLvl,
+    windSpeedMs: 3.4,
+    windGustMs: 4.8,
+    windDirectionCardinal: 'NE',
+    windDirectionDegrees: 45,
+    visibilityKm: 16.0,
+    dewPointCelsius: 16.8,
+    cloudCoverPercent: simulatedHour >= 6 && simulatedHour <= 18 ? 12 : 25,
+    sunriseTime: '06:12 AM',
+    sunsetTime: '18:24 PM',
+    daylightDuration: '12h 12m',
+    solarZenithTime: '12:18 PM',
+    precipitationRiskPercent: 5,
+    rainfallAmountMm: 0.0,
+    dustRiskIndex: 'MODERATE',
+    heatDeratingImpactPercent: heatDeratingPct,
+  };
+
   return {
-    date: new Date().toISOString().split('T')[0],
+    date: todayStr,
     projectedTotalYieldKwh: Math.round(totalYieldKwh * 10) / 10,
     peakKw: Math.round(peakKw * 10) / 10,
     hourlyTimeSeries,
     operationalAdvice: 'Optimal machinery window between 10:30 and 14:30 for high-energy operations.',
+    weatherOverview,
+    hourlyWeather,
+    sevenDayOutlook,
   };
 }
 

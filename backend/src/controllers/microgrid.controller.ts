@@ -29,10 +29,11 @@ export function getOverview(req: Request, res: Response) {
 }
 
 /**
- * GET /api/v1/microgrid/forecast/24h
+ * GET /api/v1/microgrid/forecast/24h?hour={h}
  */
-export function getForecast(_req: Request, res: Response) {
-  const data = simulationService.getForecastData();
+export function getForecast(req: Request, res: Response) {
+  const hour = resolveHour(req);
+  const data = simulationService.getForecastData(hour);
   res.json(data);
 }
 

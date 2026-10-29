@@ -43,7 +43,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [overview, setOverview] = useState<OverviewTelemetry>(() =>
     simulator.getOverviewTelemetry(getNowHour())
   );
-  const [forecast, setForecast] = useState<ForecastResponse>(() => simulator.getForecastData());
+  const [forecast, setForecast] = useState<ForecastResponse>(() =>
+    simulator.getForecastData(getNowHour())
+  );
   const [allocations, setAllocations] = useState<AllocationResponse>(() =>
     simulator.getAllocationResponse(getNowHour(), 'adjusted')
   );
@@ -58,7 +60,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       const [ovRes, fcRes, alRes, btRes, invRes] = await Promise.all([
         ApiService.getOverview(hour),
-        ApiService.getForecast(),
+        ApiService.getForecast(hour),
         ApiService.getAllocations(scheduleView, hour),
         ApiService.getBatteryDiagnostics(hour),
         ApiService.getInverters(hour),
