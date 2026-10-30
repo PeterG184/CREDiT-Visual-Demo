@@ -176,3 +176,4 @@ echo -e "  Restart Backend:     ${YELLOW}sudo systemctl restart credit-backend${
 echo -e "  Restart Frontend:    ${YELLOW}sudo systemctl restart credit-frontend${NC}"
 echo -e "  Check Status:        ${YELLOW}sudo systemctl status credit-backend credit-frontend${NC}"
 echo -e "===================================================================="
+
