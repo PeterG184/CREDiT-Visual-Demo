@@ -51,7 +51,7 @@ export const Header: React.FC = () => {
               ]}
             />
             <Text style={styles.sourceText}>
-              {isLiveBackend ? 'Backend :5678' : 'Client Simulator'}
+              {isLiveBackend ? 'Backend :5600' : 'Client Simulator'}
             </Text>
           </View>
         </View>

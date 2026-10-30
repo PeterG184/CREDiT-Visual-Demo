@@ -8,7 +8,21 @@ import {
 } from '../types/microgrid';
 import * as simulator from './simulator';
 
-const API_BASE_URL = 'http://localhost:5678/api/v1';
+// Dynamically determine the backend URL so client browsers connecting from remote devices
+// automatically reach the backend on port 5600 of the same host (Lightsail IP or domain).
+export function getApiBaseUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:5600/api/v1`;
+  }
+  return 'http://localhost:5600/api/v1';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Helper to determine if we can reach the backend
 async function fetchWithFallback<T>(

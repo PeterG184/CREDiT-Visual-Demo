@@ -4,7 +4,7 @@ import path from 'path';
 import microgridRouter from './routes/microgrid.routes';
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5678;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5600;
 
 // Middleware
 app.use(cors({
